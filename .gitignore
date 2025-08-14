@@ -1,0 +1,43 @@
+# ========================
+# OS & Editor files
+# ========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ========================
+# Backend (ASP.NET)
+# ========================
+backend/bin/
+backend/obj/
+*.user
+*.suo
+*.pdb
+*.db
+*.log
+
+# ========================
+# Frontend (Kotlin Multiplatform)
+# ========================
+frontend/.gradle/
+frontend/build/
+frontend/.idea/
+frontend/local.properties
+frontend/*.iml
+
+# ========================
+# Environment & Config
+# ========================
+.env
+.env.local
+*.secret
+*.key
+
+# ========================
+# Docker
+# ========================
+docker-data/
+*.pid
