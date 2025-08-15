@@ -1,0 +1,12 @@
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\bin\Debug\net8.0\RecipeApp.Domain.deps.json
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\bin\Debug\net8.0\RecipeApp.Domain.dll
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\bin\Debug\net8.0\RecipeApp.Domain.pdb
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.AssemblyInfoInputs.cache
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.AssemblyInfo.cs
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.csproj.CoreCompileInputs.cache
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.sourcelink.json
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.dll
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\refint\RecipeApp.Domain.dll
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\RecipeApp.Domain.pdb
+C:\00_MyProject\Test Programming Laksana\KMP_RecipeAPP_ASP.NET\backend\src\RecipeApp.Domain\obj\Debug\net8.0\ref\RecipeApp.Domain.dll
