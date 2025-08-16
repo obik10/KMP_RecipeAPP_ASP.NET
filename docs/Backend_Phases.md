@@ -256,3 +256,104 @@ ________________________________________
 ________________________________________
 
 
+📘 Phase 4 Documentation — Persistence, Migrations, and Database Integration
+🎯 Objectives
+•	Integrate a persistent data layer for recipes in MySQL.
+•	Implement Entity Framework Core migrations to manage schema evolution.
+•	Expose CRUD endpoints for recipes through ASP.NET Core API.
+•	Enable Swagger UI to test database-backed endpoints.
+•	Add caching for external recipes (TheMealDB API) to improve performance and reduce duplicate calls (Phase 4.5 mini-phase).
+________________________________________
+🏗️ Work Completed
+1. Database Setup
+•	Created a dedicated MySQL database:
+•	CREATE DATABASE recipe_app_db;
+•	Connection configured in appsettings.json:
+•	"ConnectionStrings": {
+•	  "DefaultConnection": "server=localhost;port=3306;database=recipe_app_db;user=root;password=yourpassword;"
+•	}
+2. Entity Models
+•	Recipe entity:
+o	Id (PK)
+o	Title
+o	Instructions
+o	ImagePath
+o	OwnerId (nullable, for user-specific recipes)
+o	ExternalId (nullable, for external recipes e.g. TheMealDB)
+o	ExternalSource (nullable, e.g. "TheMealDB")
+o	IsExternal (bool, default false)
+•	RecipeIngredient entity:
+o	Id (PK)
+o	Name
+o	Measure
+o	RecipeId (FK → Recipe)
+3. Migrations
+•	Initial migration (20250814160239_InitialCreate):
+o	Created Recipes table with core fields.
+•	Second migration (20250816052154_AddRecipeIngredientsAndImagePath):
+o	Added RecipeIngredients table.
+o	Added ImagePath column.
+•	Third migration (20250816123456_AddExternalFieldsToRecipe): ✅ (fix applied)
+o	Added ExternalId, ExternalSource, and IsExternal to Recipes.
+Verification:
+dotnet ef migrations list
+And database state confirmed with:
+DESCRIBE Recipes;
+DESCRIBE RecipeIngredients;
+4. Repositories
+•	Implemented RecipeRepository with:
+o	GetByIdAsync
+o	GetAllWithIngredientsAsync
+o	AddAsync
+o	UpdateAsync
+o	DeleteAsync
+•	Uses EF Core + LINQ for DB queries.
+5. API Controllers
+•	RecipesController (for user-owned CRUD).
+•	PublicRecipesController (for TheMealDB + cached recipes).
+•	Swagger UI working for all endpoints:
+o	/api/recipes
+o	/api/public/recipes
+________________________________________
+⚡ Phase 4.5 — Recipe Caching for TheMealDB
+Why?
+•	TheMealDB recipes are fetched via external API.
+•	Without caching: duplicate queries → performance overhead + rate limit risks.
+•	With caching: store external recipes in MySQL so subsequent calls are local.
+Implementation
+1.	Check DB first:
+When a request is made (e.g. GET /api/public/recipes?search=chicken):
+o	Query Recipes table for recipes with:
+	IsExternal = true
+	ExternalSource = "TheMealDB"
+	ExternalId matches MealDB idMeal.
+2.	If not found:
+o	Call TheMealDB API.
+o	Map response → Recipe + RecipeIngredient.
+o	Save into DB with IsExternal = true.
+3.	Return cached recipe for next calls.
+Example Query Flow
+User → GET /api/public/recipes?search=Arrabiata
+↓
+Backend checks `recipe_app_db.Recipes` (ExternalSource = TheMealDB)
+↓
+If not exists → Fetch from TheMealDB, store in DB
+↓
+Return Recipe + Ingredients
+Benefits
+•	✅ Faster API response for repeated queries
+•	✅ Reduced external API calls
+•	✅ Cached recipes stay available even if TheMealDB API is down
+________________________________________
+✅ Deliverables
+•	Working MySQL-backed persistence for recipes.
+•	Entity Framework migrations to evolve schema safely.
+•	Swagger UI endpoints for testing CRUD + public recipes.
+•	Caching layer for TheMealDB recipes (stored in Recipes + RecipeIngredients).
+•	Database verified with:
+o	__EFMigrationsHistory tracking applied migrations.
+o	Correct schema in Recipes and RecipeIngredients.
+
+
+
+
