@@ -9,15 +9,23 @@ Thumbs.db
 *.swo
 
 # ========================
-# Backend (ASP.NET)
+# Backend (ASP.NET Core)
 # ========================
+# Ignore build outputs recursively
 Backend/src/**/bin/
 Backend/src/**/obj/
+
+# VS/Resharper files
 *.user
 *.suo
 *.pdb
 *.db
 *.log
+
+# ASP.NET generated files
+*.cache
+*.bak
+*.tmp
 
 # ========================
 # Frontend (Kotlin Multiplatform)
@@ -27,6 +35,12 @@ Frontend/**/build/
 Frontend/.idea/
 Frontend/local.properties
 Frontend/*.iml
+
+# ========================
+# Node/JS (in case frontend has web target)
+# ========================
+Frontend/**/node_modules/
+Frontend/**/dist/
 
 # ========================
 # Environment & Config
