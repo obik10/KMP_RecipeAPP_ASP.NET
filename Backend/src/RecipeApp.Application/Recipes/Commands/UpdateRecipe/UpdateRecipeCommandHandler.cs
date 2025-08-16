@@ -16,15 +16,15 @@ public class UpdateRecipeCommandHandler : IRequestHandler<UpdateRecipeCommand, R
 
     public async Task<RecipeDto> Handle(UpdateRecipeCommand request, CancellationToken cancellationToken)
     {
+        // Load tracked entity with ingredients
         var entity = await _repo.GetByIdWithIngredientsAsync(request.Id, cancellationToken)
                      ?? throw new KeyNotFoundException("Recipe not found.");
 
-        // update basic data
+        // Mutate via domain methods (private setters stay enforced)
         entity.Update(request.Title, request.Instructions);
-
-        // replace all ingredients
         entity.ReplaceIngredients(request.Ingredients.Select(i => (i.Name, i.Measure)));
 
+        // Persist (no Update(entity) call, just SaveChanges inside repo)
         await _repo.UpdateAsync(entity, cancellationToken);
 
         return entity.ToDto();

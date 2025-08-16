@@ -7,51 +7,67 @@ namespace RecipeApp.Infrastructure.Repositories;
 
 public class RecipeRepository : IRecipeRepository
 {
-    private readonly RecipeAppDbContext _db;
+    private readonly RecipeAppDbContext _context;
 
-    public RecipeRepository(RecipeAppDbContext db)
+    public RecipeRepository(RecipeAppDbContext context)
     {
-        _db = db;
+        _context = context;
     }
 
     public async Task<Recipe?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _db.Recipes.FindAsync(new object[] { id }, cancellationToken);
+        return await _context.Recipes.FindAsync(new object?[] { id }, cancellationToken);
     }
 
     public async Task<Recipe?> GetByIdWithIngredientsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _db.Recipes
+        return await _context.Recipes
             .Include(r => r.Ingredients)
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
     }
 
     public async Task<IEnumerable<Recipe>> GetAllWithIngredientsAsync(CancellationToken cancellationToken = default)
     {
-        return await _db.Recipes
+        return await _context.Recipes
             .Include(r => r.Ingredients)
             .ToListAsync(cancellationToken);
     }
 
     public async Task AddAsync(Recipe recipe, CancellationToken cancellationToken = default)
     {
-        _db.Recipes.Add(recipe);
-        await _db.SaveChangesAsync(cancellationToken);
+        await _context.Recipes.AddAsync(recipe, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
-    {
-        _db.Recipes.Update(recipe);
-        await _db.SaveChangesAsync(cancellationToken);
-    }
+    public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken)
+{
+    var existing = await _context.Recipes
+        .Include(r => r.Ingredients)
+        .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
+
+    if (existing is null)
+        throw new KeyNotFoundException($"Recipe with Id {recipe.Id} not found");
+
+    // Use domain methods instead of direct property access
+    existing.Update(recipe.Title, recipe.Instructions);
+    existing.SetImagePath(recipe.ImagePath);
+
+    // Replace ingredients via domain method
+    existing.ReplaceIngredients(
+        recipe.Ingredients.Select(i => (i.Name, i.Measure))
+    );
+
+    await _context.SaveChangesAsync(cancellationToken);
+}
+
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var recipe = await _db.Recipes.FindAsync(new object[] { id }, cancellationToken);
-        if (recipe is not null)
+        var recipe = await _context.Recipes.FindAsync(new object?[] { id }, cancellationToken);
+        if (recipe != null)
         {
-            _db.Recipes.Remove(recipe);
-            await _db.SaveChangesAsync(cancellationToken);
+            _context.Recipes.Remove(recipe);
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

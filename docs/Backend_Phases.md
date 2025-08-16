@@ -23,6 +23,9 @@ o	Initial architecture overview.
 o	Tech stack list and reasoning.
 o	Phase-by-phase plan.
 ________________________________________
+
+
+
 Phase 2 — Backend Foundation
 Goal: Scaffold backend following Clean Architecture & Clean Code principles, connect to MySQL, and provide a testable API.
 ✅ Deliverables
@@ -83,6 +86,8 @@ ________________________________________
 •	Database schema is created and in sync.
 •	Swagger available with test endpoints.
 •	Ready to start Phase 3 (TheMealDB API integration).
+
+
 
 📄 Project Documentation – Phase 3
 Public Recipe Fetching from TheMealDB
@@ -172,5 +177,82 @@ Key Points
 •	Ingredients and measures are flattened from TheMealDB’s numbered fields.
 •	Result model (MealDto) is framework-agnostic and safe for frontend consumption.
 •	Swagger allows easy manual testing.
+
+
+
+
+
+📖 Phase 4 Documentation – Recipe CRUD with MySQL Integration
+✅ Goal of Phase 4
+Implement full CRUD (Create, Read, Update, Delete) operations for Recipes (with Ingredients & Images), integrate with MySQL using EF Core, and expose everything via Swagger API.
+________________________________________
+🔹 What We Implemented
+1. Entities & Domain Models
+We extended the Domain layer to include:
+•	User (basic user entity, owner of recipes).
+•	Recipe (title, instructions, image path, owned by user).
+•	Ingredient (linked to recipes with name + measure).
+This establishes 1-to-many relationship:
+•	User ➝ many Recipes
+•	Recipe ➝ many Ingredients
+________________________________________
+2. Application Layer (CQRS + MediatR)
+We added Commands and Queries for recipes:
+🔸 Commands
+•	CreateRecipeCommand – Create new recipe with ingredients.
+•	UpdateRecipeCommand – Update recipe details.
+•	DeleteRecipeCommand – Delete recipe by ID.
+•	UploadRecipeImageCommand – Upload and link an image to recipe.
+🔸 Queries
+•	ListRecipesQuery – Fetch all recipes with ingredients.
+•	GetRecipeByIdQuery – Fetch a single recipe by ID (with ingredients).
+Each handled using MediatR to keep a clean CQRS separation.
+________________________________________
+3. Infrastructure Layer
+We extended Infrastructure with:
+•	Repositories
+o	RecipeRepository – implements CRUD using RecipeAppDbContext.
+•	Persistence
+o	RecipeAppDbContext (DbSets for Users, Recipes, Ingredients).
+•	File Storage
+o	FileStorage – handles saving recipe images into wwwroot/uploads/.
+Database integration:
+•	Configured EF Core with MySQL provider.
+•	Connection string points to recipe_app_db.
+•	Ran dotnet ef migrations add + dotnet ef database update to build schema.
+________________________________________
+4. API Layer
+We added RecipesController with endpoints:
+Method	Endpoint	Description
+GET	/api/recipes	List all recipes (with ingredients)
+GET	/api/recipes/{id}	Get recipe by ID
+POST	/api/recipes	Create new recipe (with ingredients)
+PUT	/api/recipes/{id}	Update recipe details
+DELETE	/api/recipes/{id}	Delete recipe
+POST	/api/recipes/{id}/image	Upload recipe image (multipart/form)
+Swagger UI is enabled for documentation & testing.
+________________________________________
+5. Swagger Integration
+•	Enabled Swashbuckle.AspNetCore.
+•	Added FileUploadOperationFilter so Swagger correctly handles file uploads (IFormFile).
+•	Available at:
+o	Swagger UI → http://localhost:5076/swagger
+o	OpenAPI JSON → http://localhost:5076/swagger/v1/swagger.json
+________________________________________
+6. Database
+•	Current DB: recipe_app_db
+•	EF Core auto-created tables:
+o	Users
+o	Recipes
+o	Ingredients
+•	Relationships and FK constraints enforced by EF migrations.
+________________________________________
+🔹 Outcomes of Phase 4
+•	✅ Full Recipe CRUD (with Ingredients) working.
+•	✅ Image upload supported and stored under /wwwroot/uploads/.
+•	✅ Connected to clean MySQL database (recipe_app_db).
+•	✅ Swagger API docs available for testing endpoints.
+•	✅ Code aligned with Clean Architecture (Domain, Application, Infrastructure, API).
+________________________________________
 
 
