@@ -11,8 +11,8 @@ Thumbs.db
 # ========================
 # Backend (ASP.NET)
 # ========================
-backend/bin/
-backend/obj/
+Backend/src/**/bin/
+Backend/src/**/obj/
 *.user
 *.suo
 *.pdb
@@ -22,11 +22,11 @@ backend/obj/
 # ========================
 # Frontend (Kotlin Multiplatform)
 # ========================
-frontend/.gradle/
-frontend/build/
-frontend/.idea/
-frontend/local.properties
-frontend/*.iml
+Frontend/.gradle/
+Frontend/**/build/
+Frontend/.idea/
+Frontend/local.properties
+Frontend/*.iml
 
 # ========================
 # Environment & Config
