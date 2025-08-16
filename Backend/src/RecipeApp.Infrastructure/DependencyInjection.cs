@@ -21,6 +21,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRecipeRepository, RecipeRepository>();
+        
 
         // TheMealDB API client
         services.AddHttpClient<ITheMealDbService, TheMealDbService>();

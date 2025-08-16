@@ -1,44 +1,58 @@
 using RecipeApp.Application;
 using RecipeApp.Infrastructure;
+using RecipeApp.Application.Common.Interfaces;
+using RecipeApp.Infrastructure.Services;
 using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Mvc;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Application & Infrastructure layers
-builder.Services.AddApplication(); // We'll add this extension below
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Add controllers
-builder.Services.AddControllers()
-    .AddNewtonsoftJson(); // optional, for JSON flexibility
-
-// Add Swagger
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+
+// ✅ Register Swagger once
+builder.Services.AddSwaggerGen(c =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "RecipeApp API",
-        Version = "v1"
+        Version = "v1",
+        Description = "API for managing recipes, ingredients, and images"
     });
+
+    c.OperationFilter<RecipeApp.API.Swagger.FileUploadOperationFilter>();
 });
 
-// Health checks
 builder.Services.AddHealthChecks();
+
+// File storage using wwwroot
+builder.Services.AddScoped<IFileStorage>(sp =>
+{
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    var root = env.WebRootPath ?? "wwwroot";
+    Directory.CreateDirectory(root); // ensure exists
+    Directory.CreateDirectory(Path.Combine(root, "uploads")); // ensure /uploads exists
+    return new FileStorage(root);
+});
 
 var app = builder.Build();
 
-// Middleware pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RecipeApp API v1");
+        c.RoutePrefix = string.Empty; // open swagger at root (http://localhost:5076)
+    });
 }
 
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapHealthChecks("/health");
 

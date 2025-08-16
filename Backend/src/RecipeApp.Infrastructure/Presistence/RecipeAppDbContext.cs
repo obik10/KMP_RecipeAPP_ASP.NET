@@ -5,38 +5,46 @@ namespace RecipeApp.Infrastructure.Persistence;
 
 public class RecipeAppDbContext : DbContext
 {
-    public RecipeAppDbContext(DbContextOptions<RecipeAppDbContext> options)
-        : base(options)
-    {
-    }
+    public RecipeAppDbContext(DbContextOptions<RecipeAppDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Recipe> Recipes => Set<Recipe>();
+    public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure User
-        modelBuilder.Entity<User>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
-        });
-
-        // Configure Recipe
+        // Recipe
         modelBuilder.Entity<Recipe>(entity =>
         {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Instructions).IsRequired();
-            entity.Property(e => e.OwnerId).IsRequired(false);
+            entity.Property(r => r.Title)
+                  .IsRequired()
+                  .HasMaxLength(200);
 
-            entity.HasOne<User>()
-                  .WithMany()
-                  .HasForeignKey(e => e.OwnerId)
-                  .OnDelete(DeleteBehavior.SetNull);
+            entity.Property(r => r.Instructions)
+                  .IsRequired();
+
+            entity.Property(r => r.ImagePath)
+                  .HasMaxLength(500);
+
+            // One-to-many ingredients
+            entity.HasMany(r => r.Ingredients)
+                  .WithOne()
+                  .HasForeignKey(i => i.RecipeId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Ingredient
+        modelBuilder.Entity<RecipeIngredient>(entity =>
+        {
+            entity.Property(i => i.Name)
+                  .IsRequired()
+                  .HasMaxLength(100);
+
+            entity.Property(i => i.Measure)
+                  .IsRequired()
+                  .HasMaxLength(100);
         });
     }
 }
