@@ -24,5 +24,20 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
             .WithOne()
             .HasForeignKey(i => i.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // External recipe properties
+        builder.Property(r => r.IsExternal)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(r => r.ExternalSource)
+            .HasMaxLength(100);
+
+        builder.Property(r => r.ExternalId)
+            .HasMaxLength(100);
+
+        builder.HasIndex(r => new { r.ExternalSource, r.ExternalId })
+            .IsUnique()
+            .HasFilter("`ExternalSource` IS NOT NULL AND `ExternalId` IS NOT NULL");
     }
 }

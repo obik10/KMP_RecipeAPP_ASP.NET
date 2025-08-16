@@ -1,20 +1,25 @@
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using RecipeApp.Application.Common.Interfaces;
 using RecipeApp.Application.Recipes.Dtos;
+using RecipeApp.Domain.Entities;
+using RecipeApp.Infrastructure.Persistence;
 
 namespace RecipeApp.Infrastructure.Services;
 
 public class TheMealDbService : ITheMealDbService
 {
     private readonly HttpClient _httpClient;
+    private readonly RecipeAppDbContext _db;
 
-    public TheMealDbService(HttpClient httpClient, IConfiguration config)
+    public TheMealDbService(HttpClient httpClient, IConfiguration config, RecipeAppDbContext db)
     {
         var baseUrl = config["TheMealDb:BaseUrl"]
                       ?? throw new InvalidOperationException("TheMealDb BaseUrl not configured.");
         httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient = httpClient;
+        _db = db;
     }
 
     public async Task<IEnumerable<MealDto>> SearchMealsAsync(string search, CancellationToken cancellationToken = default)
@@ -22,7 +27,42 @@ public class TheMealDbService : ITheMealDbService
         var response = await _httpClient.GetFromJsonAsync<MealDbResponse>($"search.php?s={search}", cancellationToken);
         if (response?.Meals == null) return Enumerable.Empty<MealDto>();
 
-        return response.Meals.Select(m => new MealDto(
+        var meals = response.Meals;
+
+        // Persist into DB as cached external recipes
+        foreach (var m in meals)
+        {
+            if (string.IsNullOrWhiteSpace(m.IdMeal))
+                continue;
+
+            var existing = await _db.Recipes
+                .Include(r => r.Ingredients)
+                .FirstOrDefaultAsync(r => r.ExternalSource == "TheMealDB" && r.ExternalId == m.IdMeal, cancellationToken);
+
+            var recipeTitle = m.StrMeal ?? "Untitled";
+            var instructions = m.StrInstructions ?? "";
+            var ingredients = ExtractIngredients(m).Select(i => (i.Name, i.Measure));
+
+            if (existing is null)
+            {
+                var recipe = new Recipe(recipeTitle, instructions);
+                recipe.MarkAsExternal("TheMealDB", m.IdMeal);
+                recipe.SetImagePath(m.StrMealThumb);
+                recipe.ReplaceIngredients(ingredients);
+                await _db.Recipes.AddAsync(recipe, cancellationToken);
+            }
+            else
+            {
+                existing.Update(recipeTitle, instructions);
+                existing.SetImagePath(m.StrMealThumb);
+                existing.ReplaceIngredients(ingredients);
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        // Return DTOs as before
+        return meals.Select(m => new MealDto(
             m.IdMeal ?? "",
             m.StrMeal ?? "",
             m.StrCategory ?? "",

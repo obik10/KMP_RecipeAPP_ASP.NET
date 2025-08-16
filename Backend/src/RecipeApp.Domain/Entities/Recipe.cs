@@ -5,7 +5,7 @@ namespace RecipeApp.Domain.Entities;
 public class Recipe : Entity
 {
     public string Title { get; private set; } = default!;
-public string Instructions { get; private set; } = default!;
+    public string Instructions { get; private set; } = default!;
 
     public Guid? OwnerId { get; private set; }
 
@@ -14,6 +14,11 @@ public string Instructions { get; private set; } = default!;
 
     private readonly List<RecipeIngredient> _ingredients = new();
     public IReadOnlyList<RecipeIngredient> Ingredients => _ingredients;
+
+    // External source (e.g., TheMealDB)
+    public bool IsExternal { get; private set; }
+    public string? ExternalSource { get; private set; }
+    public string? ExternalId { get; private set; }
 
     // EF
     private Recipe() { }
@@ -43,5 +48,12 @@ public string Instructions { get; private set; } = default!;
         {
             _ingredients.Add(new RecipeIngredient(name, measure));
         }
+    }
+
+    public void MarkAsExternal(string source, string externalId)
+    {
+        IsExternal = true;
+        ExternalSource = source;
+        ExternalId = externalId;
     }
 }
