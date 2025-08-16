@@ -10,4 +10,7 @@ public interface IRecipeRepository
     Task AddAsync(Recipe recipe, CancellationToken cancellationToken = default);
     Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IEnumerable<Recipe>> SearchAsync(string keyword, CancellationToken cancellationToken = default);
+
 }

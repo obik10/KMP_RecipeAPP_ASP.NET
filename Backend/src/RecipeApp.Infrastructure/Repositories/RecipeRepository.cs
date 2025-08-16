@@ -39,27 +39,11 @@ public class RecipeRepository : IRecipeRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken)
-{
-    var existing = await _context.Recipes
-        .Include(r => r.Ingredients)
-        .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
-
-    if (existing is null)
-        throw new KeyNotFoundException($"Recipe with Id {recipe.Id} not found");
-
-    // Use domain methods instead of direct property access
-    existing.Update(recipe.Title, recipe.Instructions);
-    existing.SetImagePath(recipe.ImagePath);
-
-    // Replace ingredients via domain method
-    existing.ReplaceIngredients(
-        recipe.Ingredients.Select(i => (i.Name, i.Measure))
-    );
-
-    await _context.SaveChangesAsync(cancellationToken);
-}
-
+    public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
+    {
+        _context.Recipes.Update(recipe);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -70,4 +54,15 @@ public class RecipeRepository : IRecipeRepository
             await _context.SaveChangesAsync(cancellationToken);
         }
     }
+
+    public async Task<IEnumerable<Recipe>> SearchAsync(string keyword, CancellationToken cancellationToken = default)
+{
+    return await _context.Recipes
+        .Include(r => r.Ingredients)
+        .Where(r =>
+            r.Title.Contains(keyword) ||
+            r.Instructions.Contains(keyword) ||
+            r.Ingredients.Any(i => i.Name.Contains(keyword)))
+        .ToListAsync(cancellationToken);
+}
 }

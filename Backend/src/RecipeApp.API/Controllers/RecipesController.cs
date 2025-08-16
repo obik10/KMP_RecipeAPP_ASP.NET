@@ -30,6 +30,16 @@ public class RecipesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("search")]
+public async Task<ActionResult<IEnumerable<RecipeDto>>> Search([FromQuery] string keyword, CancellationToken ct)
+{
+    if (string.IsNullOrWhiteSpace(keyword))
+        return BadRequest("Search term is required.");
+
+    var result = await _mediator.Send(new Application.Recipes.Queries.SearchRecipes.SearchRecipesQuery(keyword), ct);
+    return Ok(result);
+}
+
     // GET /api/recipes/{id}
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<RecipeDto>> GetById(Guid id, CancellationToken ct)
