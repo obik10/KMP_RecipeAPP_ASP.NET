@@ -19,11 +19,13 @@ public class SearchRecipesQueryHandler : IRequestHandler<SearchRecipesQuery, IEn
 
         return recipes.Select(r => new RecipeDto(
             r.Id,
+            r.IsExternal,
             r.Title,
             r.Instructions,
             r.OwnerId,
             r.ImagePath,
             r.Ingredients.Select(i => new RecipeIngredientDto(i.Name, i.Measure)).ToList()
+            
         ));
     }
 }

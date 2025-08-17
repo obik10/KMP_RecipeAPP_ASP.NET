@@ -4,6 +4,7 @@ public record RecipeIngredientDto(string Name, string Measure);
 
 public record RecipeDto(
     Guid Id,
+    bool IsExternal,
     string Title,
     string Instructions,
     Guid? OwnerId,

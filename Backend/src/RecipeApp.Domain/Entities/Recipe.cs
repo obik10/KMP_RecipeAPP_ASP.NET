@@ -7,6 +7,7 @@ public class Recipe : Entity
     public string Title { get; private set; } = default!;
     public string Instructions { get; private set; } = default!;
 
+    // Now REQUIRED (non-nullable)
     public Guid? OwnerId { get; private set; }
 
     // Image path relative to web root (e.g., "/uploads/abcd.jpg")
@@ -23,12 +24,13 @@ public class Recipe : Entity
     // EF
     private Recipe() { }
 
-    public Recipe(string title, string instructions, Guid? ownerId = null)
-    {
-        Title = title;
-        Instructions = instructions;
-        OwnerId = ownerId;
-    }
+ public Recipe(string title, string instructions, Guid? ownerId = null)
+{
+    Title = title;
+    Instructions = instructions;
+    OwnerId = ownerId;
+}
+
 
     public void Update(string title, string instructions)
     {

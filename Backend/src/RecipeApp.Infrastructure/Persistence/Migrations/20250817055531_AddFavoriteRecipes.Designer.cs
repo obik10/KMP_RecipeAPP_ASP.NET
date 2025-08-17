@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RecipeApp.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using RecipeApp.Infrastructure.Persistence;
 namespace RecipeApp.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(RecipeAppDbContext))]
-    partial class RecipeAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250817055531_AddFavoriteRecipes")]
+    partial class AddFavoriteRecipes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,7 +136,15 @@ namespace RecipeApp.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("RecipeApp.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Recipe");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RecipeApp.Domain.Entities.RecipeIngredient", b =>

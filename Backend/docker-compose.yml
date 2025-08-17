@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: recipe_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: recipe_app_db
+      MYSQL_USER: recipe
+      MYSQL_PASSWORD: recipe
+    ports:
+      - "3307:3306"   # map host 3307 → container 3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: recipe_keycloak
+    command: ["start-dev"]  # dev mode
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      PROXY_ADDRESS_FORWARDING: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql-data:

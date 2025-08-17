@@ -8,25 +8,26 @@ namespace RecipeApp.Application.Recipes.Commands.UpdateRecipe;
 public class UpdateRecipeCommandHandler : IRequestHandler<UpdateRecipeCommand, RecipeDto>
 {
     private readonly IRecipeRepository _repo;
+    private readonly ICurrentUserService _currentUser;
 
-    public UpdateRecipeCommandHandler(IRecipeRepository repo)
+    public UpdateRecipeCommandHandler(IRecipeRepository repo, ICurrentUserService currentUser)
     {
         _repo = repo;
+        _currentUser = currentUser;
     }
 
     public async Task<RecipeDto> Handle(UpdateRecipeCommand request, CancellationToken cancellationToken)
     {
-        // Load tracked entity with ingredients
         var entity = await _repo.GetByIdWithIngredientsAsync(request.Id, cancellationToken)
                      ?? throw new KeyNotFoundException("Recipe not found.");
 
-        // Mutate via domain methods (private setters stay enforced)
+        if (entity.OwnerId != _currentUser.UserId)
+            throw new UnauthorizedAccessException("You are not allowed to update this recipe.");
+
         entity.Update(request.Title, request.Instructions);
         entity.ReplaceIngredients(request.Ingredients.Select(i => (i.Name, i.Measure)));
 
-        // Persist (no Update(entity) call, just SaveChanges inside repo)
         await _repo.UpdateAsync(entity, cancellationToken);
-
         return entity.ToDto();
     }
 }

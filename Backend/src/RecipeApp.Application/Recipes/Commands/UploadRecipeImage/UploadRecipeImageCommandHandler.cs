@@ -9,11 +9,13 @@ public class UploadRecipeImageCommandHandler : IRequestHandler<UploadRecipeImage
 {
     private readonly IRecipeRepository _repo;
     private readonly IFileStorage _fileStorage;
+    private readonly ICurrentUserService _currentUser;
 
-    public UploadRecipeImageCommandHandler(IRecipeRepository repo, IFileStorage fileStorage)
+    public UploadRecipeImageCommandHandler(IRecipeRepository repo, IFileStorage fileStorage, ICurrentUserService currentUser)
     {
         _repo = repo;
         _fileStorage = fileStorage;
+        _currentUser = currentUser;
     }
 
     public async Task<RecipeDto> Handle(UploadRecipeImageCommand request, CancellationToken cancellationToken)
@@ -21,7 +23,9 @@ public class UploadRecipeImageCommandHandler : IRequestHandler<UploadRecipeImage
         var entity = await _repo.GetByIdAsync(request.RecipeId, cancellationToken)
                      ?? throw new KeyNotFoundException("Recipe not found.");
 
-        // Optional: delete existing image
+        if (entity.OwnerId != _currentUser.UserId)
+            throw new UnauthorizedAccessException("You are not allowed to update this recipe image.");
+
         if (!string.IsNullOrWhiteSpace(entity.ImagePath))
         {
             await _fileStorage.DeleteAsync(entity.ImagePath!, cancellationToken);

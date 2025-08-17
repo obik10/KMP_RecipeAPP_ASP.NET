@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RecipeApp.Application.Common.Interfaces;
 using RecipeApp.Infrastructure.Persistence;
+using RecipeApp.Infrastructure.Persistence.Repositories;
 using RecipeApp.Infrastructure.Repositories;
 using RecipeApp.Infrastructure.Services;
 
@@ -19,12 +20,15 @@ public static class DependencyInjection
         services.AddDbContext<RecipeAppDbContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
+        // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRecipeRepository, RecipeRepository>();
+        services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         
 
         // TheMealDB API client
         services.AddHttpClient<ITheMealDbService, TheMealDbService>();
+
 
         return services;
     }

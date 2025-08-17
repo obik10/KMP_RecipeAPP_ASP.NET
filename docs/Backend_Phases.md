@@ -356,4 +356,43 @@ o	Correct schema in Recipes and RecipeIngredients.
 
 
 
+✅ Phase 4.6 — Unified Search (User + Cached Recipes)
+New Feature: Search recipes across both user-created and cached TheMealDB recipes.
+🔹 API Endpoint
+GET /api/recipes/search?keyword=chicken
+🔹 Behavior
+•	Matches on:
+o	Title
+o	Instructions
+o	Ingredients
+•	Returns results from:
+o	User-created recipes (OwnerId != null)
+o	Cached TheMealDB recipes (IsExternal = true)
+🔹 Example Response
+[
+  {
+    "id": "1111-aaaa",
+    "title": "Grilled Chicken",
+    "instructions": "Grill the chicken until done.",
+    "ownerId": "2222-bbbb",
+    "imagePath": "/uploads/chicken.jpg",
+    "ingredients": [
+      { "name": "Chicken Breast", "measure": "200g" },
+      { "name": "Salt", "measure": "1 tsp" }
+    ]
+  },
+  {
+    "id": "3333-cccc",
+    "title": "Chicken Curry",
+    "instructions": "Cook curry with chicken.",
+    "ownerId": null,
+    "imagePath": "https://www.themealdb.com/images/chicken-curry.jpg",
+    "ingredients": [
+      { "name": "Chicken", "measure": "500g" },
+      { "name": "Curry Powder", "measure": "2 tbsp" }
+    ]
+  }
+]
+
+
 

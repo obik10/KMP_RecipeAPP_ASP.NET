@@ -39,11 +39,27 @@ public class RecipeRepository : IRecipeRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
-    {
-        _context.Recipes.Update(recipe);
-        await _context.SaveChangesAsync(cancellationToken);
-    }
+public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
+{
+    var existing = await _context.Recipes
+        .Include(r => r.Ingredients)
+        .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
+
+    if (existing is null)
+        throw new KeyNotFoundException($"Recipe with ID {recipe.Id} not found");
+
+    // Use domain methods instead of direct assignment
+    existing.Update(recipe.Title, recipe.Instructions);
+    existing.SetImagePath(recipe.ImagePath);
+
+    // Ingredients: map them into tuples
+    var items = recipe.Ingredients.Select(i => (i.Name, i.Measure));
+    existing.ReplaceIngredients(items);
+
+    await _context.SaveChangesAsync(cancellationToken);
+}
+
+
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
