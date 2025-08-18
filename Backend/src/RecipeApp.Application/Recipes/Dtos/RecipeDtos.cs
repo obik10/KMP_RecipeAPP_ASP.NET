@@ -9,5 +9,6 @@ public record RecipeDto(
     string Instructions,
     Guid? OwnerId,
     string? ImagePath, // relative URL, e.g., "/uploads/xyz.jpg"
-    List<RecipeIngredientDto> Ingredients
+    List<RecipeIngredientDto> Ingredients,
+    string? YoutubeUrl// optional YouTube link
 );

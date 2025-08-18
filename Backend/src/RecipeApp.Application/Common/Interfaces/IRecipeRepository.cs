@@ -13,4 +13,8 @@ public interface IRecipeRepository
 
     Task<IEnumerable<Recipe>> SearchAsync(string keyword, CancellationToken cancellationToken = default);
 
+    Task<int> CountAsync(CancellationToken cancellationToken);
+    Task<IEnumerable<Recipe>> GetPagedWithIngredientsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+
+
 }

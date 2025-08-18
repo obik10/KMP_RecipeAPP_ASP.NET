@@ -7,6 +7,8 @@ public class Recipe : Entity
     public string Title { get; private set; } = default!;
     public string Instructions { get; private set; } = default!;
 
+    public string? YoutubeUrl { get; private set; }
+
     // Now REQUIRED (non-nullable)
     public Guid? OwnerId { get; private set; }
 
@@ -24,19 +26,21 @@ public class Recipe : Entity
     // EF
     private Recipe() { }
 
- public Recipe(string title, string instructions, Guid? ownerId = null)
+public Recipe(string title, string instructions, Guid? ownerId = null, string? youtubeUrl = null)
 {
     Title = title;
     Instructions = instructions;
     OwnerId = ownerId;
+    YoutubeUrl = youtubeUrl;
 }
 
+public void Update(string title, string instructions, string? youtubeUrl = null)
+{
+    Title = title;
+    Instructions = instructions;
+    YoutubeUrl = youtubeUrl;
+}
 
-    public void Update(string title, string instructions)
-    {
-        Title = title;
-        Instructions = instructions;
-    }
 
     public void SetImagePath(string? imagePath)
     {
@@ -52,10 +56,12 @@ public class Recipe : Entity
         }
     }
 
-    public void MarkAsExternal(string source, string externalId)
-    {
-        IsExternal = true;
-        ExternalSource = source;
-        ExternalId = externalId;
-    }
+ public void MarkAsExternal(string source, string externalId, string? youtubeUrl = null)
+{
+    IsExternal = true;
+    ExternalSource = source;
+    ExternalId = externalId;
+    YoutubeUrl = youtubeUrl;
+}
+
 }

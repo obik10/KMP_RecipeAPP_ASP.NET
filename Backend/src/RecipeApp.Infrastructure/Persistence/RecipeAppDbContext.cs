@@ -37,8 +37,18 @@ public class RecipeAppDbContext : DbContext
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+    // youtube link
+            modelBuilder.Entity<Recipe>(entity =>
+{
+  entity.Property(r => r.YoutubeUrl)
+        .HasColumnType("longtext")
+        .IsRequired(false)
+        .UsePropertyAccessMode(PropertyAccessMode.Property);
+});
+
+
             // Ingredient
-            modelBuilder.Entity<RecipeIngredient>(entity =>
+    modelBuilder.Entity<RecipeIngredient>(entity =>
             {
                   entity.Property(i => i.Name)
                     .IsRequired()

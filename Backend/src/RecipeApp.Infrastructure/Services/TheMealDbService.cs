@@ -43,20 +43,21 @@ public class TheMealDbService : ITheMealDbService
             var instructions = m.StrInstructions ?? "";
             var ingredients = ExtractIngredients(m).Select(i => (i.Name, i.Measure));
 
-            if (existing is null)
-            {
-                var recipe = new Recipe(recipeTitle, instructions);
-                recipe.MarkAsExternal("TheMealDB", m.IdMeal);
-                recipe.SetImagePath(m.StrMealThumb);
-                recipe.ReplaceIngredients(ingredients);
-                await _db.Recipes.AddAsync(recipe, cancellationToken);
-            }
-            else
-            {
-                existing.Update(recipeTitle, instructions);
-                existing.SetImagePath(m.StrMealThumb);
-                existing.ReplaceIngredients(ingredients);
-            }
+if (existing is null)
+{
+    var recipe = new Recipe(recipeTitle, instructions);
+    recipe.MarkAsExternal("TheMealDB", m.IdMeal, m.StrYoutube);
+    recipe.SetImagePath(m.StrMealThumb);
+    recipe.ReplaceIngredients(ingredients);
+    await _db.Recipes.AddAsync(recipe, cancellationToken);
+}
+else
+{
+    existing.Update(recipeTitle, instructions, m.StrYoutube);
+    existing.SetImagePath(m.StrMealThumb);
+    existing.ReplaceIngredients(ingredients);
+}
+
         }
 
         await _db.SaveChangesAsync(cancellationToken);

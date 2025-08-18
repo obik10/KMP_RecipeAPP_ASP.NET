@@ -30,6 +30,10 @@ public class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
             .IsRequired()
             .HasDefaultValue(false);
 
+        //youtbube link
+            builder.Property(r => r.YoutubeUrl)
+    .HasMaxLength(500);
+
         builder.Property(r => r.ExternalSource)
             .HasMaxLength(100);
 

@@ -6,11 +6,13 @@ public record CreateRecipeRequest(
     string Title,
     string Instructions,
     Guid? OwnerId,
-    List<IngredientRequest> Ingredients
+    List<IngredientRequest> Ingredients,
+     string? YoutubeUrl = null // optional YouTube link
 );
 
 public record UpdateRecipeRequest(
     string Title,
     string Instructions,
-    List<IngredientRequest> Ingredients
+    List<IngredientRequest> Ingredients,
+     string? YoutubeUrl = null // optional YouTube link
 );

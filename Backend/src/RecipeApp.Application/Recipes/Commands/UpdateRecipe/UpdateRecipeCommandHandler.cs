@@ -24,7 +24,7 @@ public class UpdateRecipeCommandHandler : IRequestHandler<UpdateRecipeCommand, R
         if (entity.OwnerId != _currentUser.UserId)
             throw new UnauthorizedAccessException("You are not allowed to update this recipe.");
 
-        entity.Update(request.Title, request.Instructions);
+        entity.Update(request.Title, request.Instructions, request.YoutubeUrl);
         entity.ReplaceIngredients(request.Ingredients.Select(i => (i.Name, i.Measure)));
 
         await _repo.UpdateAsync(entity, cancellationToken);

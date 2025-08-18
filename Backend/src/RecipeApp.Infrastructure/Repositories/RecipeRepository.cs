@@ -39,27 +39,25 @@ public class RecipeRepository : IRecipeRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
-{
-    var existing = await _context.Recipes
-        .Include(r => r.Ingredients)
-        .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
+    public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.Recipes
+            .Include(r => r.Ingredients)
+            .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
 
-    if (existing is null)
-        throw new KeyNotFoundException($"Recipe with ID {recipe.Id} not found");
+        if (existing is null)
+            throw new KeyNotFoundException($"Recipe with ID {recipe.Id} not found");
 
-    // Use domain methods instead of direct assignment
-    existing.Update(recipe.Title, recipe.Instructions);
-    existing.SetImagePath(recipe.ImagePath);
+        // Update core properties
+        existing.Update(recipe.Title, recipe.Instructions);
+        existing.SetImagePath(recipe.ImagePath);
 
-    // Ingredients: map them into tuples
-    var items = recipe.Ingredients.Select(i => (i.Name, i.Measure));
-    existing.ReplaceIngredients(items);
+        // Update ingredients
+        var items = recipe.Ingredients.Select(i => (i.Name, i.Measure));
+        existing.ReplaceIngredients(items);
 
-    await _context.SaveChangesAsync(cancellationToken);
-}
-
-
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -72,13 +70,29 @@ public async Task UpdateAsync(Recipe recipe, CancellationToken cancellationToken
     }
 
     public async Task<IEnumerable<Recipe>> SearchAsync(string keyword, CancellationToken cancellationToken = default)
-{
-    return await _context.Recipes
-        .Include(r => r.Ingredients)
-        .Where(r =>
-            r.Title.Contains(keyword) ||
-            r.Instructions.Contains(keyword) ||
-            r.Ingredients.Any(i => i.Name.Contains(keyword)))
-        .ToListAsync(cancellationToken);
-}
+    {
+        return await _context.Recipes
+            .Include(r => r.Ingredients)
+            .Where(r =>
+                r.Title.Contains(keyword) ||
+                r.Instructions.Contains(keyword) ||
+                r.Ingredients.Any(i => i.Name.Contains(keyword)))
+            .ToListAsync(cancellationToken);
+    }
+
+    // ✅ Pagination support
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Recipes.CountAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Recipe>> GetPagedWithIngredientsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        return await _context.Recipes
+            .Include(r => r.Ingredients)
+            .OrderBy(r => r.Title) // optional: order by title for consistent results
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
 }

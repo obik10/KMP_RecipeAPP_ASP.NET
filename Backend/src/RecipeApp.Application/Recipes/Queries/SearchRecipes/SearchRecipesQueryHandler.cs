@@ -24,7 +24,8 @@ public class SearchRecipesQueryHandler : IRequestHandler<SearchRecipesQuery, IEn
             r.Instructions,
             r.OwnerId,
             r.ImagePath,
-            r.Ingredients.Select(i => new RecipeIngredientDto(i.Name, i.Measure)).ToList()
+            r.Ingredients.Select(i => new RecipeIngredientDto(i.Name, i.Measure)).ToList(),
+            r.YoutubeUrl
             
         ));
     }

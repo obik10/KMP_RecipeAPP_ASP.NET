@@ -17,7 +17,7 @@ public class CreateRecipeCommandHandler : IRequestHandler<CreateRecipeCommand, R
 
     public async Task<RecipeDto> Handle(CreateRecipeCommand request, CancellationToken cancellationToken)
     {
-        var recipe = new Recipe(request.Title, request.Instructions, request.OwnerId);
+        var recipe = new Recipe(request.Title, request.Instructions, request.OwnerId, request.YoutubeUrl);
 
         // add ingredients
         recipe.ReplaceIngredients(request.Ingredients.Select(i => (i.Name, i.Measure)));

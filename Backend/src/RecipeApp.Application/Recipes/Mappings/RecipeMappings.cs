@@ -15,7 +15,8 @@ public static class RecipeMappings
             entity.ImagePath,
             entity.Ingredients
                   .Select(i => new RecipeIngredientDto(i.Name, i.Measure))
-                  .ToList()
+                  .ToList(),
+            entity.YoutubeUrl
             
         );
 }

@@ -8,5 +8,6 @@ public record CreateRecipeCommand(
     string Title,
     string Instructions,
     Guid? OwnerId,
-    List<RecipeIngredientInput> Ingredients
+    List<RecipeIngredientInput> Ingredients,
+    string? YoutubeUrl = null // optional YouTube link
 ) : IRequest<RecipeDto>;

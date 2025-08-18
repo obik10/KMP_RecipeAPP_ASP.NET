@@ -20,5 +20,10 @@ public class CreateRecipeCommandValidator : BaseValidator<CreateRecipeCommand>
                 ing.RuleFor(i => i.Name).NotEmpty().MaximumLength(100);
                 ing.RuleFor(i => i.Measure).NotEmpty().MaximumLength(100);
             });
+
+            RuleFor(x => x.YoutubeUrl)
+    .Must(url => string.IsNullOrWhiteSpace(url) || Uri.IsWellFormedUriString(url, UriKind.Absolute))
+    .WithMessage("YoutubeUrl must be a valid URL if provided.");
+
     }
 }

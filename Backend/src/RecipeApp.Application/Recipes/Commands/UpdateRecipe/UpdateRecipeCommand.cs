@@ -8,5 +8,6 @@ public record UpdateRecipeCommand(
     Guid Id,
     string Title,
     string Instructions,
-    List<RecipeIngredientInput> Ingredients
+    List<RecipeIngredientInput> Ingredients,
+    string? YoutubeUrl = null // optional YouTube link
 ) : IRequest<RecipeDto>;

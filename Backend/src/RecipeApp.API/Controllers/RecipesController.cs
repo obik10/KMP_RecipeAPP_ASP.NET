@@ -13,6 +13,7 @@ using RecipeApp.Application.Recipes.Queries.GetRecipeById;
 using RecipeApp.Application.Recipes.Queries.ListRecipes;
 using RecipeApp.Application.Recipes.Queries.GetMyRecipes;
 using RecipeApp.Application.Recipes.Queries.GetFavoriteRecipes;
+using RecipeApp.Application.Common.Models;
 
 namespace RecipeApp.API.Controllers;
 
@@ -37,12 +38,15 @@ public class RecipesController : ControllerBase
 
     // === Public endpoints ===
 
-    // GET /api/recipes
+    // GET /api/recipes?pageNumber=1&pageSize=10
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<RecipeDto>>> List(CancellationToken ct)
+    public async Task<ActionResult<PaginatedResult<RecipeDto>>> List(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new ListRecipesQuery(), ct);
+        var result = await _mediator.Send(new ListRecipesQuery(pageNumber, pageSize), ct);
         return Ok(result);
     }
 
@@ -69,7 +73,6 @@ public class RecipesController : ControllerBase
 
     // === Protected endpoints (auth required) ===
 
-    // POST /api/recipes
     [HttpPost]
     [Authorize(Policy = "CanWriteRecipes")]
     public async Task<ActionResult<RecipeDto>> Create([FromBody] CreateRecipeRequest request, CancellationToken ct)
@@ -89,7 +92,6 @@ public class RecipesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
-    // PUT /api/recipes/{id}
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "CanWriteRecipes")]
     public async Task<ActionResult<RecipeDto>> Update(Guid id, [FromBody] UpdateRecipeRequest request, CancellationToken ct)
@@ -105,7 +107,6 @@ public class RecipesController : ControllerBase
         return Ok(updated);
     }
 
-    // DELETE /api/recipes/{id}
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "CanWriteRecipes")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
@@ -114,8 +115,7 @@ public class RecipesController : ControllerBase
         return NoContent();
     }
 
-    // POST /api/recipes/{id}/image
-    [HttpPost("{id:guid}/image")]
+    [HttpPost("{id:guid}/image-recipe")]
     [Authorize(Policy = "CanWriteRecipes")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10MB
     public async Task<ActionResult<RecipeDto>> UploadImage(
@@ -137,9 +137,8 @@ public class RecipesController : ControllerBase
         return Ok(updated);
     }
 
-    // === NEW endpoints for Phase 5 ===
+    // === Favorites + MyRecipes ===
 
-    // GET /api/recipes/myrecipes
     [HttpGet("myrecipes")]
     [Authorize]
     public async Task<IActionResult> GetMyRecipes(CancellationToken ct)
@@ -151,8 +150,7 @@ public class RecipesController : ControllerBase
         return Ok(result);
     }
 
-    // POST /api/recipes/{id}/favorite
-    [HttpPost("{id:guid}/favorite")]
+    [HttpPost("{id:guid}/add-favorite")]
     [Authorize]
     public async Task<IActionResult> AddFavorite(Guid id, CancellationToken ct)
     {
@@ -163,8 +161,7 @@ public class RecipesController : ControllerBase
         return NoContent();
     }
 
-    // DELETE /api/recipes/{id}/favorite
-    [HttpDelete("{id:guid}/favorite")]
+    [HttpDelete("{id:guid}/delete-favorite")]
     [Authorize]
     public async Task<IActionResult> RemoveFavorite(Guid id, CancellationToken ct)
     {
@@ -175,8 +172,7 @@ public class RecipesController : ControllerBase
         return NoContent();
     }
 
-    // GET /api/recipes/favorites
-    [HttpGet("favorites")]
+    [HttpGet("myfavorites")]
     [Authorize]
     public async Task<IActionResult> GetFavorites(CancellationToken ct)
     {
