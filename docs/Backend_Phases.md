@@ -396,3 +396,155 @@ o	Cached TheMealDB recipes (IsExternal = true)
 
 
 
+Documentation – Phase 5.5: YouTube Link Support + Pagination
+This phase adds two new features to our RecipeApp API:
+1.	YouTube link support → Each recipe can now include a YouTubeUrl field.
+2.	Pagination for recipes → List endpoint now supports paging and returns metadata.
+________________________________________
+1. ✅ YouTube Link Support
+📌 Changes Made
+•	Domain / Entity (Recipe.cs)
+o	Added property string? YouTubeUrl { get; private set; }
+o	Extended constructor and update methods to handle YouTubeUrl.
+•	DTO (RecipeDto.cs)
+•	public record RecipeDto(
+•	    Guid Id,
+•	    string Title,
+•	    string Instructions,
+•	    string? YouTubeUrl,   // ✅ New field
+•	    List<RecipeIngredientDto> Ingredients
+•	);
+•	Mapping (RecipeMappings.cs)
+•	public static RecipeDto ToDto(this Recipe recipe) =>
+•	    new RecipeDto(
+•	        recipe.Id,
+•	        recipe.Title,
+•	        recipe.Instructions,
+•	        recipe.YouTubeUrl,
+•	        recipe.Ingredients.Select(i => i.ToDto()).ToList()
+•	    );
+•	Create / Update Commands
+o	Added youtubeUrl parameter.
+o	Pass value from CreateRecipeRequest / UpdateRecipeRequest.
+•	Controller (RecipesController.cs)
+•	var cmd = new CreateRecipeCommand(
+•	    request.Title,
+•	    request.Instructions,
+•	    ownerId,
+•	    request.Ingredients.Select(i => new RecipeIngredientInput(i.Name, i.Measure)).ToList(),
+•	    request.YouTubeUrl     // ✅ added
+•	);
+📌 API Usage
+•	Create recipe with YouTube link:
+•	POST /api/recipes
+•	{
+•	  "title": "Carbonara",
+•	  "instructions": "Boil pasta, fry pancetta...",
+•	  "youTubeUrl": "https://youtu.be/example",
+•	  "ingredients": [
+•	    { "name": "Spaghetti", "measure": "200g" },
+•	    { "name": "Eggs", "measure": "2" }
+•	  ]
+•	}
+•	Response:
+•	{
+•	  "id": "xxx",
+•	  "title": "Carbonara",
+•	  "instructions": "Boil pasta, fry pancetta...",
+•	  "youTubeUrl": "https://youtu.be/example",
+•	  "ingredients": [...]
+•	}
+________________________________________
+2. ✅ Pagination for Recipes
+📌 New Helper
+•	PaginatedResult<T>
+•	public class PaginatedResult<T>
+•	{
+•	    public int PageNumber { get; }
+•	    public int PageSize { get; }
+•	    public int TotalCount { get; }
+•	    public int TotalPages { get; }
+•	    public IEnumerable<T> Items { get; }
+•	
+•	    public PaginatedResult(IEnumerable<T> items, int count, int pageNumber, int pageSize)
+•	    {
+•	        Items = items;
+•	        TotalCount = count;
+•	        PageNumber = pageNumber;
+•	        PageSize = pageSize;
+•	        TotalPages = (int)Math.Ceiling(count / (double)pageSize);
+•	    }
+•	}
+📌 Repository (IRecipeRepository + RecipeRepository.cs)
+•	Added:
+•	Task<int> CountAsync(CancellationToken cancellationToken);
+•	Task<IEnumerable<Recipe>> GetPagedWithIngredientsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken);
+•	Implementation:
+•	public async Task<int> CountAsync(CancellationToken cancellationToken)
+•	    => await _context.Recipes.CountAsync(cancellationToken);
+•	
+•	public async Task<IEnumerable<Recipe>> GetPagedWithIngredientsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken)
+•	    => await _context.Recipes
+•	        .Include(r => r.Ingredients)
+•	        .OrderBy(r => r.Title)
+•	        .Skip((pageNumber - 1) * pageSize)
+•	        .Take(pageSize)
+•	        .ToListAsync(cancellationToken);
+📌 Query
+•	ListRecipesQuery.cs
+•	public record ListRecipesQuery(int PageNumber = 1, int PageSize = 10)
+•	    : IRequest<PaginatedResult<RecipeDto>>;
+•	Handler
+•	public async Task<PaginatedResult<RecipeDto>> Handle(ListRecipesQuery request, CancellationToken cancellationToken)
+•	{
+•	    var totalCount = await _repo.CountAsync(cancellationToken);
+•	    var entities = await _repo.GetPagedWithIngredientsAsync(request.PageNumber, request.PageSize, cancellationToken);
+•	    var dtos = entities.Select(e => e.ToDto());
+•	
+•	    return new PaginatedResult<RecipeDto>(dtos, totalCount, request.PageNumber, request.PageSize);
+•	}
+📌 Controller
+// GET /api/recipes?pageNumber=1&pageSize=10
+[HttpGet]
+[AllowAnonymous]
+public async Task<ActionResult<PaginatedResult<RecipeDto>>> List(
+    [FromQuery] int pageNumber = 1,
+    [FromQuery] int pageSize = 10,
+    CancellationToken ct = default)
+{
+    var result = await _mediator.Send(new ListRecipesQuery(pageNumber, pageSize), ct);
+    return Ok(result);
+}
+📌 Example Response
+{
+  "pageNumber": 1,
+  "pageSize": 5,
+  "totalCount": 32,
+  "totalPages": 7,
+  "items": [
+    {
+      "id": "xxx",
+      "title": "Carbonara",
+      "instructions": "Boil pasta, fry pancetta...",
+      "youTubeUrl": "https://youtu.be/example",
+      "ingredients": [...]
+    }
+  ]
+}
+________________________________________
+3. ✅ Testing
+1.	Run API:
+2.	dotnet run --project src/RecipeApp.API
+3.	Try endpoints in Swagger (/swagger) or with curl:
+4.	curl "https://localhost:5001/api/recipes?pageNumber=2&pageSize=5"
+5.	Verify:
+o	totalCount matches DB row count.
+o	items changes when switching pageNumber.
+o	youTubeUrl appears in recipe responses.
+________________________________________
+✅ Summary
+•	YouTube Link Support: Added YouTubeUrl field to recipes (entity, DTOs, mappings, commands, controller).
+•	Pagination: Added PaginatedResult<T>, repository pagination methods, query/handler, and updated controller to return metadata + items.
+•	Testing: Confirmed via Swagger/curl that paginated responses and YouTube links are returned correctly.
+
+

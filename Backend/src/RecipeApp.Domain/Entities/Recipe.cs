@@ -25,20 +25,41 @@ public class Recipe : Entity
 
     // EF
     private Recipe() { }
+    
+    private static bool IsValidYoutubeUrl(string? url)
+{
+    if (string.IsNullOrWhiteSpace(url))
+        return true; // null or empty is allowed
+
+    // Try to parse as Uri
+    if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        return false;
+
+    // Must be youtube.com or youtu.be
+    return uri.Host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase) ||
+           uri.Host.Contains("youtu.be", StringComparison.OrdinalIgnoreCase);
+}
 
 public Recipe(string title, string instructions, Guid? ownerId = null, string? youtubeUrl = null)
-{
-    Title = title;
-    Instructions = instructions;
-    OwnerId = ownerId;
-    YoutubeUrl = youtubeUrl;
-}
+    {
+        Title = title;
+        Instructions = instructions;
+        OwnerId = ownerId;
+        if (!IsValidYoutubeUrl(youtubeUrl))
+        throw new ArgumentException("Invalid YouTube URL", nameof(youtubeUrl));
+
+    YoutubeUrl = string.IsNullOrWhiteSpace(youtubeUrl) ? null : youtubeUrl;
+    }
 
 public void Update(string title, string instructions, string? youtubeUrl = null)
 {
     Title = title;
     Instructions = instructions;
-    YoutubeUrl = youtubeUrl;
+    
+   if (!IsValidYoutubeUrl(youtubeUrl))
+            throw new ArgumentException("Invalid YouTube URL", nameof(youtubeUrl));
+
+    YoutubeUrl = string.IsNullOrWhiteSpace(youtubeUrl) ? null : youtubeUrl;
 }
 
 

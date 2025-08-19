@@ -49,7 +49,7 @@ public class RecipeRepository : IRecipeRepository
             throw new KeyNotFoundException($"Recipe with ID {recipe.Id} not found");
 
         // Update core properties
-        existing.Update(recipe.Title, recipe.Instructions);
+        existing.Update(recipe.Title, recipe.Instructions, recipe.YoutubeUrl);
         existing.SetImagePath(recipe.ImagePath);
 
         // Update ingredients

@@ -85,7 +85,8 @@ public class RecipesController : ControllerBase
             request.Title,
             request.Instructions,
             ownerId,
-            request.Ingredients.Select(i => new Application.Recipes.Commands.Shared.RecipeIngredientInput(i.Name, i.Measure)).ToList()
+            request.Ingredients.Select(i => new Application.Recipes.Commands.Shared.RecipeIngredientInput(i.Name, i.Measure)).ToList(),
+            request.YoutubeUrl
         );
 
         var created = await _mediator.Send(cmd, ct);
@@ -100,7 +101,8 @@ public class RecipesController : ControllerBase
             id,
             request.Title,
             request.Instructions,
-            request.Ingredients.Select(i => new Application.Recipes.Commands.Shared.RecipeIngredientInput(i.Name, i.Measure)).ToList()
+            request.Ingredients.Select(i => new Application.Recipes.Commands.Shared.RecipeIngredientInput(i.Name, i.Measure)).ToList(),
+            request.YoutubeUrl
         );
 
         var updated = await _mediator.Send(cmd, ct);
