@@ -50,7 +50,7 @@ kotlin {
 }
 
 android {
-    namespace = "org.robiul.recipeappclone.shared"
+    namespace = "org.robiul.kmprecipeapp.shared"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

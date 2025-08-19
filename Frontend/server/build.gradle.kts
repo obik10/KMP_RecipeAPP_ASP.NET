@@ -4,10 +4,10 @@ plugins {
     application
 }
 
-group = "org.robiul.recipeappclone"
+group = "org.robiul.kmprecipeapp"
 version = "1.0.0"
 application {
-    mainClass.set("org.robiul.recipeappclone.ApplicationKt")
+    mainClass.set("org.robiul.kmprecipeapp.ApplicationKt")
     
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")

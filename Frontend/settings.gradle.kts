@@ -1,4 +1,4 @@
-rootProject.name = "RecipeAppClone"
+rootProject.name = "KMPRecipeApp_ASPDotnet"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

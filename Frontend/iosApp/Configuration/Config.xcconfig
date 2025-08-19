@@ -1,7 +1,7 @@
 TEAM_ID=
 
-PRODUCT_NAME=RecipeAppClone
-PRODUCT_BUNDLE_IDENTIFIER=org.robiul.recipeappclone.RecipeAppClone$(TEAM_ID)
+PRODUCT_NAME=KMPRecipeApp_ASPDotnet
+PRODUCT_BUNDLE_IDENTIFIER=org.robiul.kmprecipeapp.KMPRecipeApp_ASPDotnet$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0

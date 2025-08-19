@@ -80,11 +80,11 @@ kotlin {
 }
 
 android {
-    namespace = "org.robiul.recipeappclone"
+    namespace = "org.robiul.kmprecipeapp"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "org.robiul.recipeappclone"
+        applicationId = "org.robiul.kmprecipeapp"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -112,11 +112,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "org.robiul.recipeappclone.MainKt"
+        mainClass = "org.robiul.kmprecipeapp.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.robiul.recipeappclone"
+            packageName = "org.robiul.kmprecipeapp"
             packageVersion = "1.0.0"
         }
     }
