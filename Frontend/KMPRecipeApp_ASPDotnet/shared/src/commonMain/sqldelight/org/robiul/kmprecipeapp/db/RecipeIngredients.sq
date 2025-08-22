@@ -1,0 +1,19 @@
+CREATE TABLE recipe_ingredients (
+  recipeId TEXT NOT NULL,
+  name TEXT NOT NULL,
+  measure TEXT NOT NULL,
+  FOREIGN KEY (recipeId) REFERENCES recipes(id) ON DELETE CASCADE
+);
+
+insertIngredient:
+INSERT INTO recipe_ingredients (recipeId, name, measure)
+VALUES (?, ?, ?);
+
+selectIngredientsByRecipeId:
+SELECT * FROM recipe_ingredients WHERE recipeId = ?;
+
+deleteIngredientsByRecipeId:
+DELETE FROM recipe_ingredients WHERE recipeId = ?;
+
+deleteAllIngredients:
+DELETE FROM recipe_ingredients;
