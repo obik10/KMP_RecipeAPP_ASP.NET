@@ -1,6 +1,7 @@
 package org.robiul.kmprecipeapp.data.datasource
 
 import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
@@ -38,7 +39,7 @@ class RemoteDataSource(
         client.delete("/api/Recipes/$id", authRequired = true)
 
     suspend fun uploadImage(id: String, fileName: String, bytes: ByteArray): Result<RecipeDto> {
-        val form = formData {
+        val multipart = MultiPartFormDataContent(formData {
             append(
                 key = "file",
                 value = bytes,
@@ -50,11 +51,11 @@ class RemoteDataSource(
                     append(HttpHeaders.ContentType, ContentType.Application.OctetStream.toString())
                 }
             )
-        }
+        })
 
         return client.postMultipart(
             path = "/api/Recipes/$id/image-recipe",
-            formData = FormDataContent(form as Parameters),
+            formData = multipart,
             authRequired = true
         )
     }

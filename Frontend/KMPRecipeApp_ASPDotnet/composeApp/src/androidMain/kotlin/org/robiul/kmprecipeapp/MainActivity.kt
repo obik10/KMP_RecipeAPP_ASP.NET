@@ -12,7 +12,6 @@ import org.koin.core.context.startKoin
 import org.robiul.kmprecipeapp.di.androidPlatformModule
 import org.robiul.kmprecipeapp.di.composeAppModule
 import org.robiul.kmprecipeapp.di.databaseModule
-import org.robiul.kmprecipeapp.di.initKoin
 import org.robiul.kmprecipeapp.di.networkModule
 import org.robiul.kmprecipeapp.di.platformModule
 import org.robiul.kmprecipeapp.di.repositoryModule

@@ -87,3 +87,39 @@ o	The Keycloak Admin API allows user creation.
 o	Users appear in the realm after successful POST.
 
 
+        var userPayload = new
+    {
+        username = request.Username,
+        email = request.Email,
+        enabled = true,
+        emailVerified = true,
+        firstName = request.Username,
+        lastName = "User",
+        credentials = new[]
+        {
+            new { type = "password", value = request.Password, temporary = false }
+        },
+        requiredActions = Array.Empty<string>()
+    };
+
+    That combination does two critical things:
+
+🚫 Removes any blocking required actions → user can login directly.
+
+✅ Marks the password as permanent → Keycloak doesn’t force a reset on first login.
+
+✅ Flags email as verified → no email confirmation step needed.
+
+Now Keycloak considers the user fully valid → login works the same as testuser.
+
+When you first created testuser (via the client import JSON), Keycloak already marked:
+
+✅ enabled = true
+
+✅ emailVerified = true
+
+✅ no required actions
+
+✅ permanent password set
+
+So the account was already "ready-to-use".

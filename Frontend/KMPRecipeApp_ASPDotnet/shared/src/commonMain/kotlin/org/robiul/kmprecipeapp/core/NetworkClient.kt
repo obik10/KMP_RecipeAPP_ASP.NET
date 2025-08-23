@@ -12,23 +12,32 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.accept
 import io.ktor.client.request.delete
+import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.request.forms.submitForm
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import io.ktor.http.appendPathSegments
 import io.ktor.http.encodedPath
 import io.ktor.http.takeFrom
+import io.ktor.http.Parameters
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.robiul.kmprecipeapp.Constants
 import org.robiul.kmprecipeapp.core.auth.AuthTokenStore
+import org.robiul.kmprecipeapp.core.auth.AuthTokens
+import org.robiul.kmprecipeapp.core.auth.TokenResponse
+import org.robiul.kmprecipeapp.core.currentTimeMillis
 import org.robiul.kmprecipeapp.utils.AppError
 import org.robiul.kmprecipeapp.utils.Result
 
@@ -53,13 +62,79 @@ class NetworkClient(
         install(HttpRequestRetry) { retryOnServerErrors(maxRetries = 2); exponentialDelay() }
     }
 
-    // --- PUBLIC API ---
+    // --- SAFE WRAPPER: attempts one refresh on 401 for authRequired requests ---
+    suspend inline fun <reified T : Any> safe(
+        authRequired: Boolean = false,
+        crossinline block: suspend () -> HttpResponse
+    ): Result<T> {
+        try {
+            var response = block()
+
+            if (response.status.value == 401 && authRequired) {
+                // Try one-time refresh using Keycloak (avoid circular DI by calling the token endpoint directly)
+                val refreshed = attemptRefresh()
+                if (!refreshed) {
+                    tokenStore.clear()
+                    return Result.Error(AppError.Unauthorized)
+                }
+                // Retry original request once (builder will re-read token from tokenStore)
+                response = block()
+            }
+
+            if (response.status.value in 200..299) {
+                return Result.Success(response.body())
+            } else {
+                val errorText = runCatching { response.body<ErrorResponse>() }.getOrNull()
+                return Result.Error(
+                    AppError.Server(
+                        code = response.status.value,
+                        body = errorText?.message ?: response.toString()
+                    )
+                )
+            }
+        } catch (e: AppError) {
+            return Result.Error(e)
+        } catch (t: Throwable) {
+            return Result.Error(AppError.Unknown(t.message, t))
+        }
+    }
+
+    // Attempt to refresh token via Keycloak token endpoint and save into tokenStore.
+    suspend fun attemptRefresh(): Boolean {
+        val current = tokenStore.get() ?: return false
+        return try {
+            val tokenRes: TokenResponse = client.submitForm(
+                url = "${Constants.BASE_URL_KEYCLOAK}${Constants.TOKEN_PATH}",
+                formParameters = Parameters.build {
+                    append("grant_type", "refresh_token")
+                    append("refresh_token", current.refresh)
+                    append("client_id", Constants.OAUTH_CLIENT_ID)
+                    Constants.OAUTH_CLIENT_SECRET?.let { append("client_secret", it) }
+                }
+            ).body()
+
+            val now = currentTimeMillis()
+            val exp = now + (tokenRes.expiresIn * 1000L) - Constants.EXPIRY_SKEW_MS
+            val newTokens = AuthTokens(
+                access = tokenRes.accessToken ?: "",
+                refresh = tokenRes.refreshToken ?: "",
+                expiresAtMillis = exp
+            )
+            tokenStore.save(newTokens)
+            true
+        } catch (t: Throwable) {
+            tokenStore.clear()
+            false
+        }
+    }
+
+    // ------------------ helpers that build requests ------------------
 
     suspend inline fun <reified T : Any> get(
         path: String,
         authRequired: Boolean = false,
         query: Map<String, Any?> = emptyMap()
-    ): Result<T> = safe {
+    ): Result<T> = safe(authRequired) {
         val builder = HttpRequestBuilder()
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
@@ -76,7 +151,7 @@ class NetworkClient(
         path: String,
         body: Req,
         authRequired: Boolean = false
-    ): Result<Res> = safe {
+    ): Result<Res> = safe(authRequired) {
         val builder = HttpRequestBuilder()
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
@@ -89,28 +164,11 @@ class NetworkClient(
         client.post(builder)
     }
 
-    suspend inline fun <reified Res : Any> postMultipart(
-        path: String,
-        formData: io.ktor.client.request.forms.FormDataContent,
-        authRequired: Boolean = true
-    ): Result<Res> = safe {
-        val builder = HttpRequestBuilder()
-        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
-        builder.url.appendPathSegments(path.trimStart('/'))
-
-        if (authRequired) tokenStore.get()?.access?.let { token ->
-            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-        }
-
-        builder.setBody(formData)
-        client.post(builder)
-    }
-
     suspend inline fun <reified Req : Any, reified Res : Any> put(
         path: String,
         body: Req,
         authRequired: Boolean = false
-    ): Result<Res> = safe {
+    ): Result<Res> = safe(authRequired) {
         val builder = HttpRequestBuilder()
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
@@ -123,10 +181,27 @@ class NetworkClient(
         client.put(builder)
     }
 
+    suspend inline fun <reified Res : Any> postMultipart(
+        path: String,
+        formData: MultiPartFormDataContent,
+        authRequired: Boolean = true
+    ): Result<Res> = safe(authRequired) {
+        val builder = HttpRequestBuilder()
+        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
+        builder.url.appendPathSegments(path.trimStart('/'))
+
+        if (authRequired) tokenStore.get()?.access?.let { token ->
+            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
+        }
+
+        builder.setBody(formData)
+        client.post(builder)
+    }
+
     suspend inline fun <reified Res : Any> delete(
         path: String,
         authRequired: Boolean = false
-    ): Result<Res> = safe {
+    ): Result<Res> = safe(authRequired) {
         val builder = HttpRequestBuilder()
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
@@ -136,34 +211,6 @@ class NetworkClient(
         }
 
         client.delete(builder)
-    }
-
-    // --- SAFE WRAPPER (basic for T4; single-flight refresh comes in T5) ---
-
-    suspend inline fun <reified T : Any> safe(block: suspend () -> HttpResponse): Result<T> {
-        return try {
-            var response = block()
-
-            // Minimal: if 401 and we *already* have a non-null token, surface Unauthorized.
-            // In T5 we will call AuthRepository.refresh() with a Mutex and retry once.
-            if (response.status.value == 401) {
-                return Result.Error(AppError.Unauthorized)
-            }
-
-            if (response.status.value in 200..299) {
-                Result.Success(response.body())
-            } else {
-                val errorText = runCatching { response.body<ErrorResponse>() }.getOrNull()
-                Result.Error(AppError.Server(
-                    code = response.status.value,
-                    body = errorText?.message ?: response.toString()
-                ))
-            }
-        } catch (e: AppError) {
-            Result.Error(e)
-        } catch (t: Throwable) {
-            Result.Error(AppError.Unknown(t.message, t))
-        }
     }
 }
 
