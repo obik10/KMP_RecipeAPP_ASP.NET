@@ -67,6 +67,8 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.koin.core.viewmodel.android)
             implementation(libs.koin.androidx.compose)
+
+            implementation("androidx.security:security-crypto:1.1.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)

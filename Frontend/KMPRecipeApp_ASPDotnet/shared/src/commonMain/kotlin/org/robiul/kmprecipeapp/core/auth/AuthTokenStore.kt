@@ -1,27 +1,24 @@
 package org.robiul.kmprecipeapp.core.auth
-
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-
 interface AuthTokenStore {
-    val token: StateFlow<String?>
-    suspend fun save(token: String?)
-    suspend fun get(): String? = token.first()
+    val tokens: StateFlow<AuthTokens?>
+    suspend fun save(tokens: AuthTokens?)
+    suspend fun get(): AuthTokens?  // convenience
     suspend fun clear() = save(null)
-
-    suspend fun refreshToken(): String?
-
 }
 
-class InMemoryAuthTokenStore(initial: String? = null) : AuthTokenStore {
-    private val _token = MutableStateFlow(initial)
-    override val token: StateFlow<String?> = _token
-    override suspend fun save(token: String?) { _token.emit(token) }
+class InMemoryAuthTokenStore(initial: AuthTokens? = null) : AuthTokenStore {
+    private val _tokens = MutableStateFlow(initial)
+    override val tokens: StateFlow<AuthTokens?> = _tokens
 
-    override suspend fun refreshToken(): String? {
-        // minimal stub: just return the current token
-        // (real impl will call Keycloak refresh later)
-        return token.value
+    override suspend fun save(tokens: AuthTokens?) {
+        _tokens.emit(tokens)
+    }
+
+    override suspend fun get(): AuthTokens? {
+        return tokens.first()
     }
 }
+

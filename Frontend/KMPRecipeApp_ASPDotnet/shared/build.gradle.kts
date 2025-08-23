@@ -79,6 +79,10 @@ kotlin {
                 implementation(libs.sqldelight.driver.android)
                 implementation(libs.ktor.client.okhttp)
 
+                implementation("androidx.security:security-crypto:1.1.0")
+                implementation("androidx.security:security-crypto-ktx:1.1.0")
+
+
             }
         }
         val jvmMain by getting {

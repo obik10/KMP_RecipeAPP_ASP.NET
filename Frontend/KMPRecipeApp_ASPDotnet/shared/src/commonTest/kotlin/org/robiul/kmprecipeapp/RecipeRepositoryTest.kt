@@ -9,7 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import org.robiul.kmprecipeapp.core.NetworkClient
-import org.robiul.kmprecipeapp.core.auth.InMemoryAuthTokenStore
+import org.robiul.kmprecipeapp.core.auth.InMemoryAuthTokenStore2
 import org.robiul.kmprecipeapp.data.datasource.LocalDataSource
 import org.robiul.kmprecipeapp.data.datasource.RemoteDataSource
 import org.robiul.kmprecipeapp.data.repository.RecipeRepositoryImpl
@@ -69,7 +69,7 @@ class RecipeRepositoryTest {
         )
     }
 
-    private val tokenStore = InMemoryAuthTokenStore(initial = "dummy_token")
+    private val tokenStore = InMemoryAuthTokenStore2(initial = "dummy_token")
     private val networkClient = NetworkClient(
         baseUrl = "http://localhost:5076", // ignored by MockEngine
         engine = mockEngine,

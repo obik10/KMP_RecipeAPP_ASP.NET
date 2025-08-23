@@ -2,6 +2,9 @@ package org.robiul.kmprecipeapp.di
 
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
+import org.robiul.kmprecipeapp.Constants
+import org.robiul.kmprecipeapp.data.repository.AuthRepositoryImpl
+import org.robiul.kmprecipeapp.domain.repository.AuthRepository
 import org.robiul.kmprecipeapp.viewmodel.AddEditRecipeViewModel
 import org.robiul.kmprecipeapp.viewmodel.FavoritesViewModel
 import org.robiul.kmprecipeapp.viewmodel.LoginViewModel
@@ -16,4 +19,15 @@ val composeAppModule = module {
     viewModel { AddEditRecipeViewModel() }
     viewModel { MyRecipesViewModel() }
     viewModel { FavoritesViewModel() }
+
+    single<String> { Constants.BASE_URL_DEBUG } // swap by buildType
+
+    single<AuthRepository> {
+        AuthRepositoryImpl(
+            remote = get(),
+            tokenStore = get(),
+            baseUrl = get()
+        )
+    }
+
 }

@@ -37,21 +37,12 @@ class NetworkClient(
     engine: HttpClientEngine,
     val tokenStore: AuthTokenStore
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-        encodeDefaults = true
-        coerceInputValues = true
-    }
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true; coerceInputValues = true }
 
     val client: HttpClient = HttpClient(engine) {
         install(ContentNegotiation) { json(json) }
         install(Logging) {
-            logger = object : Logger {
-                override fun log(message: String) {
-                    // hook this into platform logger if needed
-                }
-            }
+            logger = object : Logger { override fun log(message: String) { /* route to platform logger, but never log tokens */ } }
             level = LogLevel.INFO
         }
         install(DefaultRequest) {
@@ -59,10 +50,7 @@ class NetworkClient(
             accept(ContentType.Application.Json)
             headers.append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
         }
-        install(HttpRequestRetry) {
-            retryOnServerErrors(maxRetries = 2)
-            exponentialDelay()
-        }
+        install(HttpRequestRetry) { retryOnServerErrors(maxRetries = 2); exponentialDelay() }
     }
 
     // --- PUBLIC API ---
@@ -77,10 +65,8 @@ class NetworkClient(
         builder.url.appendPathSegments(path.trimStart('/'))
         query.forEach { (k, v) -> if (v != null) builder.parameter(k, v) }
 
-        if (authRequired) {
-            tokenStore.get()?.let { token ->
-                builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-            }
+        if (authRequired) tokenStore.get()?.access?.let { token ->
+            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
         }
 
         client.get(builder)
@@ -95,10 +81,8 @@ class NetworkClient(
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
 
-        if (authRequired) {
-            tokenStore.get()?.let { token ->
-                builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-            }
+        if (authRequired) tokenStore.get()?.access?.let { token ->
+            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
         }
 
         builder.setBody(body)
@@ -114,10 +98,8 @@ class NetworkClient(
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
 
-        if (authRequired) {
-            tokenStore.get()?.let { token ->
-                builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-            }
+        if (authRequired) tokenStore.get()?.access?.let { token ->
+            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
         }
 
         builder.setBody(formData)
@@ -133,10 +115,8 @@ class NetworkClient(
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
 
-        if (authRequired) {
-            tokenStore.get()?.let { token ->
-                builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-            }
+        if (authRequired) tokenStore.get()?.access?.let { token ->
+            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
         }
 
         builder.setBody(body)
@@ -151,39 +131,33 @@ class NetworkClient(
         builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
         builder.url.appendPathSegments(path.trimStart('/'))
 
-        if (authRequired) {
-            tokenStore.get()?.let { token ->
-                builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-            }
+        if (authRequired) tokenStore.get()?.access?.let { token ->
+            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
         }
 
         client.delete(builder)
     }
 
-    // --- CORE SAFE WRAPPER WITH 401 REFRESH LOGIC ---
+    // --- SAFE WRAPPER (basic for T4; single-flight refresh comes in T5) ---
 
     suspend inline fun <reified T : Any> safe(block: suspend () -> HttpResponse): Result<T> {
         return try {
             var response = block()
 
-            // if 401, try refreshing and retry once
+            // Minimal: if 401 and we *already* have a non-null token, surface Unauthorized.
+            // In T5 we will call AuthRepository.refresh() with a Mutex and retry once.
             if (response.status.value == 401) {
-                val newToken = tokenStore.refreshToken()
-                if (newToken != null) {
-                    response = block()
-                }
+                return Result.Error(AppError.Unauthorized)
             }
 
             if (response.status.value in 200..299) {
                 Result.Success(response.body())
             } else {
                 val errorText = runCatching { response.body<ErrorResponse>() }.getOrNull()
-                Result.Error(
-                    AppError.Server(
-                        code = response.status.value,
-                        body = errorText?.message ?: response.toString()
-                    )
-                )
+                Result.Error(AppError.Server(
+                    code = response.status.value,
+                    body = errorText?.message ?: response.toString()
+                ))
             }
         } catch (e: AppError) {
             Result.Error(e)

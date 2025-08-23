@@ -9,8 +9,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import org.robiul.kmprecipeapp.core.NetworkClient
-import org.robiul.kmprecipeapp.core.auth.InMemoryAuthTokenStore
-import org.robiul.kmprecipeapp.data.datasource.LocalDataSource
+import org.robiul.kmprecipeapp.core.auth.InMemoryAuthTokenStore2
 import org.robiul.kmprecipeapp.data.datasource.RemoteDataSource
 import org.robiul.kmprecipeapp.data.repository.AuthRepositoryImpl
 import org.robiul.kmprecipeapp.utils.Result
@@ -81,7 +80,7 @@ class AuthRepositoryTest {
         }
     }
 
-    private val tokenStore = InMemoryAuthTokenStore(initial = null)
+    private val tokenStore = InMemoryAuthTokenStore2(initial = null)
     private val networkClient = NetworkClient(
         baseUrl = "http://localhost", // ignored by MockEngine
         engine = mockEngine,

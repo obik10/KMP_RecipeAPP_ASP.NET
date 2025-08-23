@@ -1,6 +1,21 @@
 package org.robiul.kmprecipeapp
 
 object Constants {
-    // Phase 7 base URL (can be overridden via DI)
-    const val DEFAULT_BASE_URL: String = "http://localhost:5076"
+    // Base URLs
+    const val BASE_URL_DEBUG: String = "http://10.0.2.2:8080"  // Android emulator localhost
+    const val BASE_URL_RELEASE: String = "https://api.yourproductiondomain.com"
+    const val DEFAULT_BASE_URL: String = BASE_URL_DEBUG
+    // Keycloak / ASP.NET token endpoint
+    const val TOKEN_PATH: String = "/realms/recipe-app/protocol/openid-connect/token"
+
+    // OAuth client configuration
+    const val OAUTH_CLIENT_ID: String = "recipe-app-api"   // from your script
+    val OAUTH_CLIENT_SECRET: String? = null          // public client
+
+    // Demo test user credentials (for development/testing only)
+    const val TEST_USERNAME: String = "testuser"
+    const val TEST_PASSWORD: String = "test123"
+
+    // Clock skew safety window (ms)
+    const val EXPIRY_SKEW_MS: Long = 15_000L
 }
