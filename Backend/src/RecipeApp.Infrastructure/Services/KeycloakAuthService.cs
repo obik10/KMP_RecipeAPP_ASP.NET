@@ -66,17 +66,23 @@ _clientSecret = _config["KeycloakAdmin:ClientSecret"]
 
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        // 2️⃣ Create user in Keycloak
+     // 2️⃣ Create user in Keycloak
         var userPayload = new
+    {
+        username = request.Username,
+        email = request.Email,
+        enabled = true,
+        emailVerified = true,
+        firstName = request.Username,
+        lastName = "User",
+        credentials = new[]
         {
-            username = request.Username,
-            email = request.Email,
-            enabled = true,
-            credentials = new[]
-            {
-                new { type = "password", value = request.Password, temporary = false }
-            }
-        };
+            new { type = "password", value = request.Password, temporary = false }
+        },
+        requiredActions = Array.Empty<string>()
+    };
+
+
 
         var content = new StringContent(JsonSerializer.Serialize(userPayload), Encoding.UTF8, "application/json");
 
