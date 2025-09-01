@@ -25,6 +25,7 @@ import org.robiul.kmprecipeapp.utils.AppError
 import org.robiul.kmprecipeapp.utils.Result
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.robiul.kmprecipeapp.utils.decodeJwtPayload
 
 class AuthRepositoryImpl(
     private val remote: RemoteDataSource,
@@ -48,6 +49,7 @@ class AuthRepositoryImpl(
                     append("username", username)
                     append("password", password)
                     append("client_id", Constants.OAUTH_CLIENT_ID)
+
                     // request offline_access to encourage issuance of refresh_token
 //                    append("scope", "openid offline_access")
 //                    Constants.OAUTH_CLIENT_SECRET?.let { append("client_secret", it) }
@@ -82,6 +84,26 @@ class AuthRepositoryImpl(
         }
     }
 
+    //current user
+    override suspend fun getCurrentUser(): Result<User?> {
+        return try {
+            val access = tokenStore.get()?.access ?: return Result.Success(null)
+            val payload = decodeJwtPayload(access) ?: return Result.Success(null)
+
+            val user = User(
+                id = payload["sub"]?.toString()?.trim('"') ?: "",
+                name = payload["preferred_username"]?.toString()?.trim('"')
+                    ?: payload["name"]?.toString()?.trim('"')
+                    ?: "",
+                email = payload["email"]?.toString()?.trim('"')
+            )
+            Result.Success(user)
+        } catch (e: Exception) {
+            Result.Error(AppError.Unknown(e.message, e))
+        }
+    }
+
+
     override suspend fun logout(): Result<Unit> {
         tokenStore.clear()
         return Result.Success(Unit)
@@ -96,7 +118,8 @@ class AuthRepositoryImpl(
                     append("grant_type", "refresh_token")
                     append("refresh_token", current.refresh)
                     append("client_id", Constants.OAUTH_CLIENT_ID)
-                    Constants.OAUTH_CLIENT_SECRET?.let { append("client_secret", it) }
+                    append("scope", "openid profile email offline_access")
+
                 }
             )
 

@@ -52,9 +52,32 @@ public class RecipeRepository : IRecipeRepository
         existing.Update(recipe.Title, recipe.Instructions, recipe.YoutubeUrl);
         existing.SetImagePath(recipe.ImagePath);
 
-        // Update ingredients
-        var items = recipe.Ingredients.Select(i => (i.Name, i.Measure));
-        existing.ReplaceIngredients(items);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(Recipe recipe, IEnumerable<(string Name, string Measure)> ingredients, CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.Recipes
+            .Include(r => r.Ingredients)
+            .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
+
+        if (existing is null)
+            throw new KeyNotFoundException($"Recipe with ID {recipe.Id} not found in the database.");
+
+        // Update core properties
+        existing.Update(recipe.Title, recipe.Instructions, recipe.YoutubeUrl);
+        existing.SetImagePath(recipe.ImagePath);
+
+        // Explicitly handle ingredient updates
+        // Remove existing ingredients
+        _context.RecipeIngredients.RemoveRange(existing.Ingredients);
+        
+        // Add new ingredients
+        foreach (var (name, measure) in ingredients)
+        {
+            var newIngredient = new RecipeIngredient(name, measure, recipe.Id);
+            _context.RecipeIngredients.Add(newIngredient);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
     }

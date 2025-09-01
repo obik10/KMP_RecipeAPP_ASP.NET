@@ -11,10 +11,12 @@ public class RecipeIngredient : Entity
     // EF
     private RecipeIngredient() { }
 
-    public RecipeIngredient(string name, string measure)
+    public RecipeIngredient(string name, string measure, Guid recipeId)
     {
         Name = name;
         Measure = measure;
+        RecipeId = recipeId;
+
     }
 
     public void Update(string name, string measure)

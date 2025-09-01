@@ -4,9 +4,10 @@ data class Recipe(
     val id: String,
     val title: String,
     val instructions: String,
-    val ownerId: String,
+    val ownerId: String? = null,
     val imagePath: String? = null,
     val ingredients: List<Ingredient> = emptyList(),
     val youtubeUrl: String? = null,
     val isExternal: Boolean = false
 )
+

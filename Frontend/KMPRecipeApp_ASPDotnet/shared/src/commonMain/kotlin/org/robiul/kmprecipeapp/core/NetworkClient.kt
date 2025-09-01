@@ -9,26 +9,11 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.accept
-import io.ktor.client.request.delete
-import io.ktor.client.request.forms.FormDataContent
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.formData
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.client.request.post
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
+import io.ktor.client.request.*
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.submitForm
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.URLBuilder
-import io.ktor.http.appendPathSegments
-import io.ktor.http.encodedPath
-import io.ktor.http.takeFrom
-import io.ktor.http.Parameters
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -42,16 +27,16 @@ import org.robiul.kmprecipeapp.utils.AppError
 import org.robiul.kmprecipeapp.utils.Result
 
 class NetworkClient(
-    val baseUrl: String,
+    private val baseUrl: String,
     engine: HttpClientEngine,
     val tokenStore: AuthTokenStore
 ) {
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true; coerceInputValues = true }
 
-    val client: HttpClient = HttpClient(engine) {
+    val client = HttpClient(engine) {
         install(ContentNegotiation) { json(json) }
         install(Logging) {
-            logger = object : Logger { override fun log(message: String) { /* route to platform logger, but never log tokens */ } }
+            logger = object : Logger { override fun log(message: String) { /* no token logging */ } }
             level = LogLevel.INFO
         }
         install(DefaultRequest) {
@@ -59,39 +44,38 @@ class NetworkClient(
             accept(ContentType.Application.Json)
             headers.append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
         }
-        install(HttpRequestRetry) { retryOnServerErrors(maxRetries = 2); exponentialDelay() }
+        install(HttpRequestRetry) {
+            retryOnServerErrors(maxRetries = 2)
+            exponentialDelay()
+        }
     }
 
-    // --- SAFE WRAPPER: attempts one refresh on 401 for authRequired requests ---
+    // ---------------- Safe wrapper ----------------
     suspend inline fun <reified T : Any> safe(
         authRequired: Boolean = false,
-        crossinline block: suspend () -> HttpResponse
+        crossinline block: suspend (accessToken: String?) -> HttpResponse
     ): Result<T> {
         try {
-            var response = block()
+            val token = tokenStore.get()?.access
+            var response = block(token)
 
-            if (response.status.value == 401 && authRequired) {
-                // Try one-time refresh using Keycloak (avoid circular DI by calling the token endpoint directly)
+            if (response.status == HttpStatusCode.Unauthorized && authRequired) {
                 val refreshed = attemptRefresh()
                 if (!refreshed) {
                     tokenStore.clear()
                     return Result.Error(AppError.Unauthorized)
                 }
-                // Retry original request once (builder will re-read token from tokenStore)
-                response = block()
+                val newToken = tokenStore.get()?.access
+                response = block(newToken)
             }
 
-            if (response.status.value in 200..299) {
-                return Result.Success(response.body())
+            return if (response.status.value in 200..299) {
+                Result.Success(response.body())
             } else {
                 val errorText = runCatching { response.body<ErrorResponse>() }.getOrNull()
-                return Result.Error(
-                    AppError.Server(
-                        code = response.status.value,
-                        body = errorText?.message ?: response.toString()
-                    )
-                )
+                Result.Error(AppError.Server(response.status.value, errorText?.message ?: response.toString()))
             }
+
         } catch (e: AppError) {
             return Result.Error(e)
         } catch (t: Throwable) {
@@ -99,7 +83,7 @@ class NetworkClient(
         }
     }
 
-    // Attempt to refresh token via Keycloak token endpoint and save into tokenStore.
+    // ---------------- Token Refresh ----------------
     suspend fun attemptRefresh(): Boolean {
         val current = tokenStore.get() ?: return false
         return try {
@@ -115,12 +99,13 @@ class NetworkClient(
 
             val now = currentTimeMillis()
             val exp = now + (tokenRes.expiresIn * 1000L) - Constants.EXPIRY_SKEW_MS
-            val newTokens = AuthTokens(
-                access = tokenRes.accessToken ?: "",
-                refresh = tokenRes.refreshToken ?: "",
-                expiresAtMillis = exp
+            tokenStore.save(
+                AuthTokens(
+                    access = tokenRes.accessToken ?: "",
+                    refresh = tokenRes.refreshToken ?: "",
+                    expiresAtMillis = exp
+                )
             )
-            tokenStore.save(newTokens)
             true
         } catch (t: Throwable) {
             tokenStore.clear()
@@ -128,89 +113,61 @@ class NetworkClient(
         }
     }
 
-    // ------------------ helpers that build requests ------------------
-
+    // ---------------- HTTP Methods ----------------
     suspend inline fun <reified T : Any> get(
         path: String,
         authRequired: Boolean = false,
         query: Map<String, Any?> = emptyMap()
-    ): Result<T> = safe(authRequired) {
-        val builder = HttpRequestBuilder()
-        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
-        builder.url.appendPathSegments(path.trimStart('/'))
-        query.forEach { (k, v) -> if (v != null) builder.parameter(k, v) }
-
-        if (authRequired) tokenStore.get()?.access?.let { token ->
-            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-        }
-
-        client.get(builder)
+    ): Result<T> = safe(authRequired) { token ->
+        client.get(buildRequest(path, authRequired, token, query))
     }
 
     suspend inline fun <reified Req : Any, reified Res : Any> post(
         path: String,
         body: Req,
         authRequired: Boolean = false
-    ): Result<Res> = safe(authRequired) {
-        val builder = HttpRequestBuilder()
-        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
-        builder.url.appendPathSegments(path.trimStart('/'))
-
-        if (authRequired) tokenStore.get()?.access?.let { token ->
-            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-        }
-
-        builder.setBody(body)
-        client.post(builder)
+    ): Result<Res> = safe(authRequired) { token ->
+        client.post(buildRequest(path, authRequired, token).apply { setBody(body) })
     }
 
     suspend inline fun <reified Req : Any, reified Res : Any> put(
         path: String,
         body: Req,
         authRequired: Boolean = false
-    ): Result<Res> = safe(authRequired) {
-        val builder = HttpRequestBuilder()
-        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
-        builder.url.appendPathSegments(path.trimStart('/'))
+    ): Result<Res> = safe(authRequired) { token ->
+        client.put(buildRequest(path, authRequired, token).apply { setBody(body) })
+    }
 
-        if (authRequired) tokenStore.get()?.access?.let { token ->
-            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-        }
-
-        builder.setBody(body)
-        client.put(builder)
+    suspend inline fun <reified Res : Any> delete(
+        path: String,
+        authRequired: Boolean = false
+    ): Result<Res> = safe(authRequired) { token ->
+        client.delete(buildRequest(path, authRequired, token))
     }
 
     suspend inline fun <reified Res : Any> postMultipart(
         path: String,
         formData: MultiPartFormDataContent,
         authRequired: Boolean = true
-    ): Result<Res> = safe(authRequired) {
-        val builder = HttpRequestBuilder()
-        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
-        builder.url.appendPathSegments(path.trimStart('/'))
-
-        if (authRequired) tokenStore.get()?.access?.let { token ->
-            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
-        }
-
-        builder.setBody(formData)
-        client.post(builder)
+    ): Result<Res> = safe(authRequired) { token ->
+        client.post(buildRequest(path, authRequired, token).apply { setBody(formData) })
     }
 
-    suspend inline fun <reified Res : Any> delete(
+    // ---------------- Build Request Helper ----------------
+    fun buildRequest(
         path: String,
-        authRequired: Boolean = false
-    ): Result<Res> = safe(authRequired) {
-        val builder = HttpRequestBuilder()
-        builder.url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" }.build())
-        builder.url.appendPathSegments(path.trimStart('/'))
-
-        if (authRequired) tokenStore.get()?.access?.let { token ->
-            builder.headers.append(HttpHeaders.Authorization, "Bearer $token")
+        authRequired: Boolean,
+        token: String?,
+        query: Map<String, Any?> = emptyMap()
+    ): HttpRequestBuilder {
+        return HttpRequestBuilder().apply {
+            url.takeFrom(URLBuilder(baseUrl).apply { encodedPath = "" })
+            url.appendPathSegments(path.trimStart('/'))
+            query.forEach { (k, v) -> if (v != null) parameter(k, v) }
+            if (authRequired && !token.isNullOrBlank()) {
+                headers.append(HttpHeaders.Authorization, "Bearer $token")
+            }
         }
-
-        client.delete(builder)
     }
 }
 

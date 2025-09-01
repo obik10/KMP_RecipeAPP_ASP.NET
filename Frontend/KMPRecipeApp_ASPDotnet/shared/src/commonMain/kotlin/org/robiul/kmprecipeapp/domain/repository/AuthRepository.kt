@@ -12,4 +12,6 @@ interface AuthRepository {
     suspend fun register(username: String, email: String, password: String): Result<Unit>
     suspend fun saveToken(token: String?): Result<Unit>
     suspend fun currentToken(): Result<String?>
+
+    suspend fun getCurrentUser(): Result<User?>
 }

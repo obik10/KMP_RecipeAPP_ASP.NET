@@ -42,19 +42,25 @@ builder.Services
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
-    .AddJwtBearer(options =>
+      .AddJwtBearer(options =>
     {
-        options.Authority = authority;        // e.g. http://localhost:8080/realms/recipe-app
-        options.Audience = audience;          // e.g. recipe-app-api
+        options.Authority = authority;
+        options.Audience = audience;
         options.RequireHttpsMetadata = requireHttpsMetadata;
-
+        // ...existing code...
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidAudience = audience,
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
-            ValidateLifetime = true
+            ValidateLifetime = true,
+            // Accept issuer variations used while testing from Android emulator (10.0.2.2)
+            ValidIssuers = new[] {
+                authority,
+                // also accept the same realm host when accessed from emulator
+                authority.Replace("localhost", "10.0.2.2")
+            }
         };
     });
 

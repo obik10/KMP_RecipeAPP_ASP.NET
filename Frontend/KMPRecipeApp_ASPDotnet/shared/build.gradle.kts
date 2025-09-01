@@ -47,6 +47,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.koin.core)
+                implementation(kotlin("stdlib")) // <-- this is required
+
 
                 // Ktor (MockEngine only in Phase 6)
                 implementation(libs.ktor.client.core)
@@ -64,6 +66,9 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
 
                 implementation("io.ktor:ktor-client-core:2.3.4") // core Ktor client
+
+                implementation("com.russhwolf:multiplatform-settings:1.1.1")
+
 
             }
         }

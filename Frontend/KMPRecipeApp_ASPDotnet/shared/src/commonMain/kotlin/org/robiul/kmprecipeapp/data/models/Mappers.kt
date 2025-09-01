@@ -1,5 +1,6 @@
 package org.robiul.kmprecipeapp.data.models
 
+import org.robiul.kmprecipeapp.Constants
 import org.robiul.kmprecipeapp.data.models.dto.*
 import org.robiul.kmprecipeapp.domain.models.Ingredient
 import org.robiul.kmprecipeapp.domain.models.Recipe
@@ -11,7 +12,10 @@ fun RecipeDto.toDomain(): Recipe = Recipe(
     title = title,
     instructions = instructions,
     ownerId = ownerId,
-    imagePath = imagePath,
+    imagePath = imagePath?.let { path ->
+        if (path.startsWith("http")) path
+        else Constants.BASE_URL_API.trimEnd('/') + "/" + path.trimStart('/')
+    },
     ingredients = ingredients.map { it.toDomain() },
     youtubeUrl = youtubeUrl,
     isExternal = isExternal

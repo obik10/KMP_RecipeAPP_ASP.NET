@@ -14,6 +14,7 @@ using RecipeApp.Application.Recipes.Queries.ListRecipes;
 using RecipeApp.Application.Recipes.Queries.GetMyRecipes;
 using RecipeApp.Application.Recipes.Queries.GetFavoriteRecipes;
 using RecipeApp.Application.Common.Models;
+using RecipeApp.Application.Recipes.Commands.Shared;
 
 namespace RecipeApp.API.Controllers;
 
@@ -28,17 +29,16 @@ public class RecipesController : ControllerBase
         _mediator = mediator;
     }
 
-    // Helpers
     private bool TryGetUserId(out Guid userId)
     {
         userId = Guid.Empty;
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                  ?? User.FindFirstValue("sub");
         return Guid.TryParse(sub, out userId);
     }
 
     // === Public endpoints ===
 
-    // GET /api/recipes?pageNumber=1&pageSize=10
     [HttpGet]
     [AllowAnonymous]
     public async Task<ActionResult<PaginatedResult<RecipeDto>>> List(
@@ -50,32 +50,36 @@ public class RecipesController : ControllerBase
         return Ok(result);
     }
 
-    // GET /api/recipes/search?keyword=...
     [HttpGet("search")]
     [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<RecipeDto>>> Search([FromQuery] string keyword, CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<RecipeDto>>> Search(
+        [FromQuery] string keyword,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(keyword))
             return BadRequest("Search term is required.");
 
-        var result = await _mediator.Send(new Application.Recipes.Queries.SearchRecipes.SearchRecipesQuery(keyword), ct);
+        var result = await _mediator.Send(
+            new Application.Recipes.Queries.SearchRecipes.SearchRecipesQuery(keyword), ct);
+
         return Ok(result);
     }
 
-    // GET /api/recipes/{id}
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
     public async Task<ActionResult<RecipeDto>> GetById(Guid id, CancellationToken ct)
     {
-        var item = await _mediator.Send(new GetRecipeByIdQuery(id), ct);
-        return item is null ? NotFound() : Ok(item);
+        var recipe = await _mediator.Send(new GetRecipeByIdQuery(id), ct);
+        return recipe is null ? NotFound() : Ok(recipe);
     }
 
-    // === Protected endpoints (auth required) ===
+    // === Protected endpoints ===
 
     [HttpPost]
     [Authorize(Policy = "CanWriteRecipes")]
-    public async Task<ActionResult<RecipeDto>> Create([FromBody] CreateRecipeRequest request, CancellationToken ct)
+    public async Task<ActionResult<RecipeDto>> Create(
+        [FromBody] CreateRecipeRequest request,
+        CancellationToken ct)
     {
         Guid? ownerId = null;
         if (TryGetUserId(out var uid))
@@ -85,7 +89,7 @@ public class RecipesController : ControllerBase
             request.Title,
             request.Instructions,
             ownerId,
-            request.Ingredients.Select(i => new Application.Recipes.Commands.Shared.RecipeIngredientInput(i.Name, i.Measure)).ToList(),
+            request.Ingredients.Select(i => new RecipeIngredientInput(i.Name, i.Measure)).ToList(),
             request.YoutubeUrl
         );
 
@@ -95,13 +99,19 @@ public class RecipesController : ControllerBase
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "CanWriteRecipes")]
-    public async Task<ActionResult<RecipeDto>> Update(Guid id, [FromBody] UpdateRecipeRequest request, CancellationToken ct)
+    public async Task<ActionResult<RecipeDto>> Update(
+        Guid id,
+        [FromBody] UpdateRecipeRequest request,
+        CancellationToken ct)
     {
+        if (id == Guid.Empty)
+            return BadRequest("Invalid recipe id.");
+
         var cmd = new UpdateRecipeCommand(
             id,
             request.Title,
             request.Instructions,
-            request.Ingredients.Select(i => new Application.Recipes.Commands.Shared.RecipeIngredientInput(i.Name, i.Measure)).ToList(),
+            request.Ingredients.Select(i => new RecipeIngredientInput(i.Name, i.Measure)).ToList(),
             request.YoutubeUrl
         );
 
@@ -139,11 +149,11 @@ public class RecipesController : ControllerBase
         return Ok(updated);
     }
 
-    // === Favorites + MyRecipes ===
+    // === My Recipes + Favorites ===
 
     [HttpGet("myrecipes")]
     [Authorize]
-    public async Task<IActionResult> GetMyRecipes(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<RecipeDto>>> GetMyRecipes(CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();
@@ -176,7 +186,7 @@ public class RecipesController : ControllerBase
 
     [HttpGet("myfavorites")]
     [Authorize]
-    public async Task<IActionResult> GetFavorites(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<RecipeDto>>> GetFavorites(CancellationToken ct)
     {
         if (!TryGetUserId(out var userId))
             return Unauthorized();

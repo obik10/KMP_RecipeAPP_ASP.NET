@@ -1,3 +1,17 @@
+import org.robiul.kmprecipeapp.di.databaseModule
+import org.robiul.kmprecipeapp.di.networkModule
+import org.robiul.kmprecipeapp.di.platformModule
+import org.robiul.kmprecipeapp.di.repositoryModule
+import org.robiul.kmprecipeapp.di.useCaseModule
+
+object Modules {
+    val allModules = listOf(networkModule, repositoryModule, useCaseModule, platformModule,
+        databaseModule
+    )
+}
+
+
+
 //package org.robiul.kmprecipeapp.di
 //
 //import app.cash.sqldelight.db.SqlDriver

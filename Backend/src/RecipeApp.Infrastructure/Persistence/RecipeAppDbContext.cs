@@ -20,21 +20,25 @@ public class RecipeAppDbContext : DbContext
             // Recipe
             modelBuilder.Entity<Recipe>(entity =>
             {
-                  entity.Property(r => r.Title)
-                    .IsRequired()
-                    .HasMaxLength(200);
+              entity.Property(r => r.Title)
+                .IsRequired()
+                .HasMaxLength(200);
 
-                  entity.Property(r => r.Instructions)
-                    .IsRequired();
+              entity.Property(r => r.Instructions)
+                .IsRequired();
 
-                  entity.Property(r => r.ImagePath)
-                    .HasMaxLength(500);
+              entity.Property(r => r.ImagePath)
+                .HasMaxLength(500);
 
-                  // One-to-many ingredients
-                  entity.HasMany(r => r.Ingredients)
-                    .WithOne()
-                    .HasForeignKey(i => i.RecipeId)
-                    .OnDelete(DeleteBehavior.Cascade);
+              // One-to-many ingredients
+              entity.HasMany(r => r.Ingredients)
+                .WithOne()
+                .HasForeignKey(i => i.RecipeId)
+                .OnDelete(DeleteBehavior.Cascade);
+                    
+                //       entity.Metadata
+                // .FindNavigation(nameof(Recipe.Ingredients))!
+                // .SetPropertyAccessMode(PropertyAccessMode.Field);
             });
 
     // youtube link

@@ -20,7 +20,7 @@ data class IngredientRequest(
 data class CreateRecipeRequest(
     val title: String,
     val instructions: String,
-    val ownerId: String,
+    val ownerId: String?,
     val ingredients: List<IngredientRequest>,
     val youtubeUrl: String
 )
@@ -45,7 +45,7 @@ data class RecipeDto(
     val isExternal: Boolean,
     val title: String,
     val instructions: String,
-    val ownerId: String,
+    val ownerId: String? = null,
     val imagePath: String? = null,
     val ingredients: List<RecipeIngredientDto> = emptyList(),
     val youtubeUrl: String? = null

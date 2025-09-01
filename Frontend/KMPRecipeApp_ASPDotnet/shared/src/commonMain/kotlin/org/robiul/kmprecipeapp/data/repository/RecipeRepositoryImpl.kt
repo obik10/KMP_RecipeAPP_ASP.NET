@@ -1,5 +1,6 @@
 package org.robiul.kmprecipeapp.data.repository
 
+import kotlinx.serialization.json.Json
 import org.robiul.kmprecipeapp.data.datasource.LocalDataSource
 import org.robiul.kmprecipeapp.data.datasource.RemoteDataSource
 import org.robiul.kmprecipeapp.data.models.dto.CreateRecipeRequest
@@ -7,6 +8,7 @@ import org.robiul.kmprecipeapp.data.models.dto.IngredientRequest
 import org.robiul.kmprecipeapp.data.models.dto.UpdateRecipeRequest
 import org.robiul.kmprecipeapp.data.models.toDomain
 import org.robiul.kmprecipeapp.domain.models.Ingredient
+import org.robiul.kmprecipeapp.domain.models.PaginatedResult
 import org.robiul.kmprecipeapp.domain.models.Recipe
 import org.robiul.kmprecipeapp.domain.repository.RecipeRepository
 import org.robiul.kmprecipeapp.utils.Result
@@ -16,18 +18,36 @@ class RecipeRepositoryImpl(
     private val local: LocalDataSource
 ) : RecipeRepository {
 
-    override suspend fun getRecipes(pageNumber: Int, pageSize: Int): Result<List<Recipe>> {
-        when (val net = remote.listPaginated(pageNumber, pageSize)) {
+    override suspend fun getRecipes(pageNumber: Int, pageSize: Int): Result<PaginatedResult<Recipe>> {
+        return when (val net = remote.listPaginated(pageNumber, pageSize)) {
             is Result.Success -> {
-                val domain = net.data.items.map { it.toDomain() }
-                // cache
-                local.cacheRecipes(domain)
-                return Result.Success(domain)
+                val domainItems = net.data.items.map { it.toDomain() }
+                local.cacheRecipes(domainItems)
+                Result.Success(
+                    PaginatedResult(
+                        items = domainItems,
+                        totalCount = net.data.totalCount,
+                        pageNumber = net.data.pageNumber,
+                        pageSize = net.data.pageSize,
+                        totalPages = net.data.totalPages
+                    )
+                )
             }
             is Result.Error -> {
                 val cache = local.getAllRecipes()
-                return if (cache is Result.Success && cache.data.isNotEmpty()) cache
-                else Result.Error(net.error)
+                if (cache is Result.Success && cache.data.isNotEmpty()) {
+                    Result.Success(
+                        PaginatedResult(
+                            items = cache.data,
+                            totalCount = cache.data.size,
+                            pageNumber = pageNumber,
+                            pageSize = pageSize,
+                            totalPages = null
+                        )
+                    )
+                } else {
+                    Result.Error(net.error)
+                }
             }
         }
     }
@@ -60,9 +80,15 @@ class RecipeRepositoryImpl(
             }
         }
     }
+    private val json = Json { prettyPrint = true }
+
 
     override suspend fun createRecipe(recipe: Recipe): Result<Recipe> {
         val req = toCreateRequest(recipe)
+        // debug
+        println("▶︎ createRecipe JSON:\n${json.encodeToString(req)}")
+
+        println("▶︎ createRecipe request: title='${req.title}', ingredients=${req.ingredients.map { it.name to it.measure }}")
         return when (val net = remote.create(req)) {
             is Result.Success -> {
                 val domain = net.data.toDomain()
@@ -70,19 +96,31 @@ class RecipeRepositoryImpl(
                 local.cacheRecipes(listOf(domain))
                 Result.Success(domain)
             }
-            is Result.Error -> Result.Error(net.error)
+            is Result.Error -> {
+                println("❌ createRecipe failed: ${net.error}")
+                Result.Error(net.error)
+            }
         }
     }
 
     override suspend fun updateRecipe(id: String, recipe: Recipe): Result<Recipe> {
         val req = toUpdateRequest(recipe)
+
+        println("▶︎ updateRecipe JSON:\n${json.encodeToString(req)}")
+        println("📤 Sending UpdateRecipeRequest JSON: ${json.encodeToString(UpdateRecipeRequest.serializer(), req)}")
+
+        // debug
+        println("▶︎ updateRecipe id=$id request: title='${req.title}', ingredients=${req.ingredients.map { it.name to it.measure }}")
         return when (val net = remote.update(id, req)) {
             is Result.Success -> {
                 val domain = net.data.toDomain()
                 local.cacheRecipes(listOf(domain))
                 Result.Success(domain)
             }
-            is Result.Error -> Result.Error(net.error)
+            is Result.Error -> {
+                println("❌ updateRecipe failed for id=$id: ${net.error}")
+                Result.Error(net.error)
+            }
         }
     }
 
@@ -95,6 +133,7 @@ class RecipeRepositoryImpl(
             is Result.Error -> Result.Error(net.error)
         }
     }
+
 
     override suspend fun uploadRecipeImage(id: String, fileName: String, bytes: ByteArray): Result<Recipe> {
         return when (val net = remote.uploadImage(id, fileName, bytes)) {
@@ -134,13 +173,20 @@ class RecipeRepositoryImpl(
     }
 
     override suspend fun removeFavorite(id: String): Result<Recipe> {
-        return when (val net = remote.removeFavorite(id)) {
+        println("⚠️ removeFavorite called with id=$id")
+        val net = remote.removeFavorite(id)
+        println("⚠️ removeFavorite network result=$net")
+        return when (net) {
             is Result.Success -> {
+                println("✅ removeFavorite SUCCESS for id=$id")
                 val domain = net.data.toDomain()
                 local.cacheRecipes(listOf(domain))
                 Result.Success(domain)
             }
-            is Result.Error -> Result.Error(net.error)
+            is Result.Error -> {
+                println("❌ removeFavorite FAILED for id=$id, error=${net.error}")
+                Result.Error(net.error)
+            }
         }
     }
 
@@ -159,20 +205,32 @@ class RecipeRepositoryImpl(
     }
 
     // --- mapping helpers ---
+    private fun normalizeIngredient(i: Ingredient): IngredientRequest =
+        IngredientRequest(
+            name = i.name.trim(),
+            measure = i.measure.trim()
+        )
+
     private fun toCreateRequest(recipe: Recipe): CreateRecipeRequest =
         CreateRecipeRequest(
-            title = recipe.title,
-            instructions = recipe.instructions,
+            title = recipe.title.trim(),
+            instructions = recipe.instructions.trim(),
             ownerId = recipe.ownerId,
-            ingredients = recipe.ingredients.map { IngredientRequest(name = it.name, measure = it.measure) },
-            youtubeUrl = recipe.youtubeUrl ?: ""
+            ingredients = recipe.ingredients
+                .map { normalizeIngredient(it) }
+                .filter { it.name.isNotBlank() }, // drop empty rows
+            youtubeUrl = recipe.youtubeUrl?.trim() ?: ""
         )
 
     private fun toUpdateRequest(recipe: Recipe): UpdateRecipeRequest =
         UpdateRecipeRequest(
-            title = recipe.title,
-            instructions = recipe.instructions,
-            ingredients = recipe.ingredients.map { IngredientRequest(name = it.name, measure = it.measure) },
-            youtubeUrl = recipe.youtubeUrl ?: ""
+            title = recipe.title.trim(),
+            instructions = recipe.instructions.trim(),
+            ingredients = recipe.ingredients
+                .map { normalizeIngredient(it) }
+                .filter { it.name.isNotBlank() || it.measure.isNotBlank() }, // keep if either filled
+            youtubeUrl = recipe.youtubeUrl?.trim() ?: ""
         )
+
+
 }

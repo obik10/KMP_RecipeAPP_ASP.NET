@@ -1,10 +1,11 @@
 package org.robiul.kmprecipeapp.domain.repository
 
+import org.robiul.kmprecipeapp.domain.models.PaginatedResult
 import org.robiul.kmprecipeapp.domain.models.Recipe
 import org.robiul.kmprecipeapp.utils.Result
 
 interface RecipeRepository {
-    suspend fun getRecipes(pageNumber: Int, pageSize: Int): Result<List<Recipe>>
+    suspend fun getRecipes(pageNumber: Int, pageSize: Int): Result<PaginatedResult<Recipe>>
     suspend fun searchRecipes(keyword: String): Result<List<Recipe>>
 
     // additional methods

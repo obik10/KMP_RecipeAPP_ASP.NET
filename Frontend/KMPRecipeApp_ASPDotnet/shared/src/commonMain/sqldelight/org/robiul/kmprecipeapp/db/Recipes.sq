@@ -2,25 +2,65 @@ CREATE TABLE recipes (
   id TEXT NOT NULL PRIMARY KEY,
   title TEXT NOT NULL,
   instructions TEXT NOT NULL,
-  ownerId TEXT NOT NULL,
+  ownerId TEXT, -- Nullable: public recipes won’t have an owner
   imagePath TEXT,
-  isExternal INTEGER NOT NULL DEFAULT 0,
+  isExternal INTEGER NOT NULL DEFAULT 0, -- 0 = local, 1 = external/public
   youtubeUrl TEXT,
   cachedAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
+-- Insert or update a recipe
 insertOrReplaceRecipe:
-INSERT OR REPLACE INTO recipes (id, title, instructions, ownerId, imagePath, isExternal, youtubeUrl, cachedAt)
+INSERT OR REPLACE INTO recipes (
+  id, title, instructions, ownerId, imagePath, isExternal, youtubeUrl, cachedAt
+)
 VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s','now'));
 
+-- Get all recipes (public + user)
 selectAllRecipes:
-SELECT * FROM recipes ORDER BY cachedAt DESC;
+SELECT * FROM recipes
+ORDER BY cachedAt DESC;
 
+-- Get only public recipes (shared recipes)
+selectPublicRecipes:
+SELECT * FROM recipes
+WHERE ownerId IS NULL
+ORDER BY cachedAt DESC;
+
+-- Get recipes created by a specific user
+selectUserRecipes:
+SELECT * FROM recipes
+WHERE ownerId = ?
+ORDER BY cachedAt DESC;
+
+-- Get single recipe by id
 selectRecipeById:
-SELECT * FROM recipes WHERE id = ?;
+SELECT * FROM recipes
+WHERE id = ?;
 
+-- Search recipes by title (public + user)
 searchRecipesByTitle:
-SELECT * FROM recipes WHERE title LIKE ? ORDER BY cachedAt DESC;
+SELECT * FROM recipes
+WHERE title LIKE ?
+ORDER BY cachedAt DESC;
 
+-- Search only public recipes
+searchPublicRecipesByTitle:
+SELECT * FROM recipes
+WHERE title LIKE ? AND ownerId IS NULL
+ORDER BY cachedAt DESC;
+
+-- Search only user recipes
+searchUserRecipesByTitle:
+SELECT * FROM recipes
+WHERE title LIKE ? AND ownerId = ?
+ORDER BY cachedAt DESC;
+
+-- Delete all recipes
 deleteAllRecipes:
 DELETE FROM recipes;
+
+-- Delete recipes by user (optional, useful for logout/cleanup)
+deleteUserRecipes:
+DELETE FROM recipes
+WHERE ownerId = ?;
